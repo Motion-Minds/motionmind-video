@@ -1,6 +1,6 @@
 {
   "name": "motionmind",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Make videos with your AI coding agent (HyperFrames) and track every version: agent skill, CLI and a local studio — MLflow-style.",
   "keywords": ["video", "motion-graphics", "hyperframes", "ai-agent", "agent-skills", "claude-code", "codex", "mlflow", "gsap", "cli"],
   "author": "Vinzzztty",
@@ -47,7 +47,7 @@
     "build:cli": "tsc -p tsconfig.cli.json",
     "start": "next start -H 127.0.0.1 -p 4310",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.cli.json --noEmit",
-    "prepack": "node -e \"for (const f of ['README.md','LICENSE','NOTICE.md']) require('fs').copyFileSync('../' + f, f)\" && npm run build"
+    "prepack": "node -e \"const fs = require('fs'); fs.copyFileSync('README.npm.md', 'README.md'); for (const f of ['LICENSE', 'NOTICE.md']) fs.copyFileSync('../' + f, f)\" && npm run build"
   },
   "dependencies": {
     "next": "16.4.3",

@@ -8,7 +8,7 @@
 Promos, reels, product demos and tutorials built as HyperFrames projects by the agent you already use, with a local
 studio that works like MLflow for renders.
 
-[![Version](https://img.shields.io/badge/version-0.1.0-c9f24d?style=flat-square&labelColor=0e0f11)](https://github.com/Motion-Minds/motionmind-video/blob/main/studio/package.json)
+[![npm](https://img.shields.io/npm/v/motionmind?color=c9f24d&labelColor=0e0f11&style=flat-square)](https://www.npmjs.com/package/motionmind)
 [![License: MIT](https://img.shields.io/badge/license-MIT-c9f24d?style=flat-square&labelColor=0e0f11)](https://github.com/Motion-Minds/motionmind-video/blob/main/LICENSE)
 [![Agent Skills](https://img.shields.io/badge/format-Agent%20Skills-c9f24d?style=flat-square&labelColor=0e0f11)](#how-the-skill-keeps-quality-up)
 [![Engine](https://img.shields.io/badge/engine-HyperFrames-c9f24d?style=flat-square&labelColor=0e0f11)](https://github.com/heygen-com/hyperframes)
@@ -200,8 +200,9 @@ motionmind setup my-studio
 
 `setup` creates the workspace (`motionmind.store.json`, `projects/`, `shared/brands/`, `AGENTS.md`, `CLAUDE.md`),
 copies the skill to `.agents/skills/motionmind` with a link at `.claude/skills/motionmind`, and runs
-`npx hyperframes skills` to install the official HyperFrames skills for the agents it finds. Update the skill later
-with `motionmind skill install` (add `--global` to install it into `~/.agents` and `~/.claude` instead).
+`npx hyperframes skills` to install the official HyperFrames skills into your agents' global skill folders (in your
+home directory; skip with `--no-hyperframes-skill`). Update the motionmind skill later with `motionmind skill install`
+(add `--global` to install it into `~/.agents` and `~/.claude` instead).
 
 ### From source
 

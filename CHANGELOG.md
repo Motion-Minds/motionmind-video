@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.1.0 — unreleased
+## 0.1.1
+
+- npm package page gets its own shorter README (`studio/README.npm.md`); the full README stays on GitHub.
+- `setup` note: the official HyperFrames skills are installed into the agents' global skill folders; skip with
+  `--no-hyperframes-skill`.
+
+## 0.1.0
 
 First public version.
 
