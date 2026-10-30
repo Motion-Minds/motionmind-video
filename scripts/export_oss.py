@@ -18,7 +18,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 FILES = [
-    "AGENTS.md", "README.md", "LICENSE", "NOTICE.md", "CHANGELOG.md", ".gitignore",
+    "AGENTS.md", "README.md", "LICENSE", "NOTICE.md", "CHANGELOG.md", "SECURITY.md", ".gitignore",
     ".github/workflows/ci.yml",
     "motionmind.config.example.json",
     "scripts/export_oss.py",
