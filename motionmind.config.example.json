@@ -1,0 +1,8 @@
+{
+  "protected_repos": [
+    "~/code/my-product-app",
+    "~/code/my-landing-page"
+  ],
+  "sfx_library": "~/sounds",
+  "private_terms": []
+}

@@ -1,0 +1,16 @@
+{
+  "brand": "Demo Coffee",
+  "domain": "demo.example",
+  "palette": {
+    "night": "#0B0F17",
+    "brand_blue": "#3F6BFF",
+    "signal_yellow": "#FFEA00",
+    "paper": "#F4F5F2"
+  },
+  "color_logic": {
+    "blue": "Produk dan aksi utama",
+    "yellow": "Kata kunci dan CTA saja"
+  },
+  "fonts": {},
+  "logo": "logos/demo-logo.svg"
+}

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Design board — {{project}}</title>
+<style>
+  /* Visual twin of TASTE.md §3–§5: edit both together. Values below are placeholders. */
+  :root { --bg: #0b0f17; --fg: #f4f5f2; --muted: #8496b0; --line: #1e2d4a; }
+  body { margin: 0; padding: 40px; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, sans-serif; }
+  h1 { margin: 0 0 4px; font-size: 26px; } h2 { margin: 32px 0 12px; font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+  .swatches { display: flex; gap: 14px; flex-wrap: wrap; }
+  .sw { width: 150px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .sw i { display: block; height: 80px; } .sw div { padding: 8px 10px; font-size: 13px; } .sw b { display: block; }
+  .type div { margin: 6px 0; } .note { color: var(--muted); }
+  table { border-collapse: collapse; } td { border-top: 1px solid var(--line); padding: 8px 16px 8px 0; vertical-align: top; }
+</style>
+</head>
+<body>
+  <h1>{{project}}</h1>
+  <div class="note">Style board · same values as TASTE.md</div>
+
+  <h2>Palette</h2>
+  <div class="swatches">
+    <div class="sw"><i style="background:#0b0f17"></i><div><b>Background</b>#0B0F17</div></div>
+    <div class="sw"><i style="background:#3f6bff"></i><div><b>Primary</b>#3F6BFF</div></div>
+    <div class="sw"><i style="background:#ffea00"></i><div><b>Accent (CTA only)</b>#FFEA00</div></div>
+    <div class="sw"><i style="background:#f4f5f2"></i><div><b>Text</b>#F4F5F2</div></div>
+  </div>
+
+  <h2>Type</h2>
+  <div class="type">
+    <div style="font-size:64px;font-weight:900">Display 64 / 900</div>
+    <div style="font-size:32px;font-weight:700">Keyword 32 / 700</div>
+    <div style="font-size:20px">Caption 20 / 400</div>
+  </div>
+
+  <h2>Motion &amp; sound</h2>
+  <table>
+    <tr><td>Entrances</td><td>power3.out · 0.5 s</td></tr>
+    <tr><td>Exits</td><td>power2.in · 0.3 s</td></tr>
+    <tr><td>Transitions</td><td>hard cut on the beat</td></tr>
+    <tr><td>Music</td><td>120 BPM · −14 LUFS master</td></tr>
+  </table>
+</body>
+</html>

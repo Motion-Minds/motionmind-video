@@ -1,0 +1,54 @@
+# ── Personal / machine-local ──────────────────────────────────────────────
+motionmind.config.json
+LOCAL.md
+RULES.md
+MOTION-SKILLS.md
+.env
+.env.*
+!.env.example
+# Agent config of whoever works in this checkout
+.omp/
+# Skill copies installed by `motionmind skill install` (source: studio/skills/)
+.agents/
+.claude/
+
+# ── Tracking store data (a checkout can double as a store) ────────────────
+motionmind.store.json
+registry.json
+.registry.lock
+*.tmp
+projects/*
+!projects/.gitkeep
+shared/brands/*
+!shared/brands/demo/
+!shared/brands/motionmind/
+shared/ui-fonts/*
+!shared/ui-fonts/README.md
+# Legacy static dashboard (replaced by the Studio)
+dashboard/
+
+# ── HyperFrames / render caches ───────────────────────────────────────────
+.hyperframes/
+.thumbnails/
+.waveform-cache/
+renders/
+
+# ── Build output & dependencies ───────────────────────────────────────────
+node_modules/
+.next/
+studio/dist/
+studio/next-env.d.ts
+studio/README.md
+studio/LICENSE
+studio/NOTICE.md
+*.tsbuildinfo
+*.tgz
+__pycache__/
+
+# ── Logs & OS / editor files ──────────────────────────────────────────────
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

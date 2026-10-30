@@ -1,0 +1,23 @@
+{
+  "brand": "MotionMind",
+  "domain": null,
+  "palette": {
+    "graphite": "#0E0F11",
+    "lime": "#C9F24D",
+    "paper": "#F2F3EE",
+    "muted": "#81857D",
+    "amber": "#F5B544"
+  },
+  "color_logic": {
+    "lime": "Aksi utama, sinyal live / production, simbol",
+    "graphite": "Latar dan tile simbol",
+    "amber": "Peringatan dan stage staging"
+  },
+  "fonts": {},
+  "logo": "logos/motionmind-symbol.svg",
+  "logo_variants": {
+    "symbol": "logos/motionmind-symbol.svg",
+    "small": "logos/motionmind-symbol-small.svg — untuk 16–32 px (favicon)",
+    "mono": "logos/motionmind-symbol-mono.svg — satu warna, untuk cetak/emboss"
+  }
+}

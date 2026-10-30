@@ -1,0 +1,64 @@
+{
+  "name": "motionmind",
+  "version": "0.1.0",
+  "description": "Make videos with your AI coding agent (HyperFrames) and track every version: agent skill, CLI and a local studio — MLflow-style.",
+  "keywords": ["video", "motion-graphics", "hyperframes", "ai-agent", "agent-skills", "claude-code", "codex", "mlflow", "gsap", "cli"],
+  "author": "Vinzzztty",
+  "homepage": "https://github.com/Motion-Minds/motionmind-video#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Motion-Minds/motionmind-video.git",
+    "directory": "studio"
+  },
+  "bugs": {
+    "url": "https://github.com/Motion-Minds/motionmind-video/issues"
+  },
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "motionmind": "bin/motionmind.mjs"
+  },
+  "files": [
+    "bin",
+    "dist",
+    ".next",
+    "!.next/cache",
+    "!.next/dev",
+    "!.next/trace*",
+    "app",
+    "components",
+    "core",
+    "lib",
+    "public",
+    "skills",
+    "sfx",
+    "starter-kits",
+    "templates",
+    "next.config.ts",
+    "tsconfig.json",
+    "NOTICE.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "next dev -H 127.0.0.1 -p 4310",
+    "build": "next build && tsc -p tsconfig.cli.json",
+    "build:cli": "tsc -p tsconfig.cli.json",
+    "start": "next start -H 127.0.0.1 -p 4310",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.cli.json --noEmit",
+    "prepack": "node -e \"for (const f of ['README.md','LICENSE','NOTICE.md']) require('fs').copyFileSync('../' + f, f)\" && npm run build"
+  },
+  "dependencies": {
+    "next": "16.4.3",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "marked": "18.1.2"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0"
+  }
+}

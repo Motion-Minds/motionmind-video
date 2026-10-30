@@ -1,0 +1,362 @@
+{
+  "version": 1,
+  "updated_at": "2026-10-29 19:35",
+  "sounds": [
+    {
+      "id": "alerts/error",
+      "file": "Alerts/error.ogg",
+      "category": "Alerts",
+      "duration_s": 0.103,
+      "sha1": "bd0b82b245c5464462f314e7e2561def12283e39",
+      "added": "2026-10-29",
+      "source": "Kenney Interface Sounds 1.0 (error_004.ogg) — kenney.nl",
+      "license": "CC0-1.0",
+      "tags": [
+        "error",
+        "problem",
+        "warning"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "chimes/bong",
+      "file": "Chimes/bong.ogg",
+      "category": "Chimes",
+      "duration_s": 0.123,
+      "sha1": "4d3c5683f8fa99177c1f7633836a0e0399cbfc16",
+      "added": "2026-10-29",
+      "source": "Kenney Interface Sounds 1.0 (bong_001.ogg) — kenney.nl",
+      "license": "CC0-1.0",
+      "tags": [
+        "bong",
+        "notify"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "chimes/glass",
+      "file": "Chimes/glass.ogg",
+      "category": "Chimes",
+      "duration_s": 0.278,
+      "sha1": "c5b5ead09ac7c957a2044ad64608f6fe3ffae59c",
+      "added": "2026-10-29",
+      "source": "Kenney Interface Sounds 1.0 (glass_001.ogg) — kenney.nl",
+      "license": "CC0-1.0",
+      "tags": [
+        "glass",
+        "chime",
+        "highlight"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "chimes/sparkle",
+      "file": "Chimes/sparkle.ogg",
+      "category": "Chimes",
+      "duration_s": 0.9,
+      "sha1": "44a582268e8a6d24e8ae90a28317fb705447cf15",
+      "added": "2026-10-29",
+      "source": "MotionMind (synthesised: filtered noise + sine sweeps, seeded)",
+      "license": "CC0-1.0",
+      "tags": [
+        "sparkle",
+        "shine",
+        "logo",
+        "cta"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "chimes/success",
+      "file": "Chimes/success.ogg",
+      "category": "Chimes",
+      "duration_s": 0.539,
+      "sha1": "a029b4209574c526c9bb9888979fdf3ee89de719",
+      "added": "2026-10-29",
+      "source": "Kenney Interface Sounds 1.0 (confirmation_002.ogg) — kenney.nl",
+      "license": "CC0-1.0",
+      "tags": [
+        "success",
+        "chime",
+        "result"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "clicks/click",
+      "file": "Clicks/click.ogg",
+      "category": "Clicks",
+      "duration_s": 0.1,
+      "sha1": "3fd39a5bc24c0f10ccb6d4778f01326d06144198",
+      "added": "2026-10-29",
+      "source": "Kenney Interface Sounds 1.0 (click_001.ogg) — kenney.nl",
+      "license": "CC0-1.0",
+      "tags": [
+        "click",
+        "ui",
+        "tap"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "clicks/tap-soft",
+      "file": "Clicks/tap-soft.ogg",
+      "category": "Clicks",
+      "duration_s": 0.191,
+      "sha1": "c0f735670be0a38a98d2bc3701a4993d0a063c6f",
+      "added": "2026-10-29",
+      "source": "Kenney Interface Sounds 1.0 (drop_002.ogg) — kenney.nl",
+      "license": "CC0-1.0",
+      "tags": [
+        "tap",
+        "soft",
+        "ui"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "clicks/tick",
+      "file": "Clicks/tick.ogg",
+      "category": "Clicks",
+      "duration_s": 0.043,
+      "sha1": "bf7df59bc763af6857738979a9890ed34fe472c3",
+      "added": "2026-10-29",
+      "source": "Kenney Interface Sounds 1.0 (select_001.ogg) — kenney.nl",
+      "license": "CC0-1.0",
+      "tags": [
+        "tick",
+        "reveal",
+        "word"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "clicks/toggle",
+      "file": "Clicks/toggle.ogg",
+      "category": "Clicks",
+      "duration_s": 0.139,
+      "sha1": "0fab2e6230d8829ce3f71a36b8cd06955b19f246",
+      "added": "2026-10-29",
+      "source": "Kenney Interface Sounds 1.0 (toggle_001.ogg) — kenney.nl",
+      "license": "CC0-1.0",
+      "tags": [
+        "toggle",
+        "switch",
+        "ui"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "glitch/glitch",
+      "file": "Glitch/glitch.ogg",
+      "category": "Glitch",
+      "duration_s": 0.03,
+      "sha1": "6078e14ca1ff7fec864c4e40c75d79f0072cd1b4",
+      "added": "2026-10-29",
+      "source": "Kenney Interface Sounds 1.0 (glitch_002.ogg) — kenney.nl",
+      "license": "CC0-1.0",
+      "tags": [
+        "glitch",
+        "digital"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "impacts/impact-boom",
+      "file": "Impacts/impact-boom.ogg",
+      "category": "Impacts",
+      "duration_s": 1.6,
+      "sha1": "b96fd92eb29b7e29b4889faee64bdf7117168122",
+      "added": "2026-10-29",
+      "source": "MotionMind (synthesised: filtered noise + sine sweeps, seeded)",
+      "license": "CC0-1.0",
+      "tags": [
+        "impact",
+        "boom",
+        "logo",
+        "slam"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "impacts/impact-soft",
+      "file": "Impacts/impact-soft.ogg",
+      "category": "Impacts",
+      "duration_s": 0.6,
+      "sha1": "7f87409559806e4c99b48837a534871e5af3d33a",
+      "added": "2026-10-29",
+      "source": "MotionMind (synthesised: filtered noise + sine sweeps, seeded)",
+      "license": "CC0-1.0",
+      "tags": [
+        "impact",
+        "thud",
+        "hit"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "pops/confirm",
+      "file": "Pops/confirm.ogg",
+      "category": "Pops",
+      "duration_s": 0.29,
+      "sha1": "778f174aeb2eb8c2e456bfdb9ab5b50bb766a911",
+      "added": "2026-10-29",
+      "source": "Kenney Interface Sounds 1.0 (confirmation_001.ogg) — kenney.nl",
+      "license": "CC0-1.0",
+      "tags": [
+        "confirm",
+        "pop",
+        "success"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "pops/open",
+      "file": "Pops/open.ogg",
+      "category": "Pops",
+      "duration_s": 0.148,
+      "sha1": "3a6618eb9346042410a3081404d4696593539b5e",
+      "added": "2026-10-29",
+      "source": "Kenney Interface Sounds 1.0 (open_001.ogg) — kenney.nl",
+      "license": "CC0-1.0",
+      "tags": [
+        "open",
+        "card",
+        "panel"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "pops/pop-up",
+      "file": "Pops/pop-up.ogg",
+      "category": "Pops",
+      "duration_s": 0.418,
+      "sha1": "ec24a71cbe7bd0c485a33413ae63f5fdcf270d09",
+      "added": "2026-10-29",
+      "source": "Kenney Interface Sounds 1.0 (maximize_004.ogg) — kenney.nl",
+      "license": "CC0-1.0",
+      "tags": [
+        "pop",
+        "up",
+        "open",
+        "card"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "pops/pop",
+      "file": "Pops/pop.ogg",
+      "category": "Pops",
+      "duration_s": 0.287,
+      "sha1": "3df9e035aeccc6cf03697ff5a1e8fb9ef7cff433",
+      "added": "2026-10-29",
+      "source": "Kenney Interface Sounds 1.0 (drop_004.ogg) — kenney.nl",
+      "license": "CC0-1.0",
+      "tags": [
+        "pop",
+        "appear"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "risers/riser-long",
+      "file": "Risers/riser-long.ogg",
+      "category": "Risers",
+      "duration_s": 3,
+      "sha1": "0b2557e679de75f7c3fc87fc2cd51de20751cf1c",
+      "added": "2026-10-29",
+      "source": "MotionMind (synthesised: filtered noise + sine sweeps, seeded)",
+      "license": "CC0-1.0",
+      "tags": [
+        "riser",
+        "build",
+        "tension",
+        "long"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "risers/riser-short",
+      "file": "Risers/riser-short.ogg",
+      "category": "Risers",
+      "duration_s": 1.5,
+      "sha1": "c7b5b95499896d88059773e6209bdb39bc087e5c",
+      "added": "2026-10-29",
+      "source": "MotionMind (synthesised: filtered noise + sine sweeps, seeded)",
+      "license": "CC0-1.0",
+      "tags": [
+        "riser",
+        "build",
+        "tension",
+        "short"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "whooshes/swoosh-down",
+      "file": "Whooshes/swoosh-down.ogg",
+      "category": "Whooshes",
+      "duration_s": 0.7,
+      "sha1": "1c40d6bf8e3f11723c2ed376544df37b9952a5b6",
+      "added": "2026-10-29",
+      "source": "MotionMind (synthesised: filtered noise + sine sweeps, seeded)",
+      "license": "CC0-1.0",
+      "tags": [
+        "swoosh",
+        "exit",
+        "down"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "whooshes/whoosh-fast",
+      "file": "Whooshes/whoosh-fast.ogg",
+      "category": "Whooshes",
+      "duration_s": 0.45,
+      "sha1": "d11120caeb2f56ff9ac8b58326acd16689ef7cd8",
+      "added": "2026-10-29",
+      "source": "MotionMind (synthesised: filtered noise + sine sweeps, seeded)",
+      "license": "CC0-1.0",
+      "tags": [
+        "whoosh",
+        "transition",
+        "fast"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "whooshes/whoosh-low",
+      "file": "Whooshes/whoosh-low.ogg",
+      "category": "Whooshes",
+      "duration_s": 1.3,
+      "sha1": "955fdcc9321456be4e3ba5c73a40d63f346cd745",
+      "added": "2026-10-29",
+      "source": "MotionMind (synthesised: filtered noise + sine sweeps, seeded)",
+      "license": "CC0-1.0",
+      "tags": [
+        "whoosh",
+        "low",
+        "cinematic",
+        "intro"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "whooshes/whoosh-soft",
+      "file": "Whooshes/whoosh-soft.ogg",
+      "category": "Whooshes",
+      "duration_s": 0.8,
+      "sha1": "793ecb28f2f7028acaa4e15ba1ea4604734bab79",
+      "added": "2026-10-29",
+      "source": "MotionMind (synthesised: filtered noise + sine sweeps, seeded)",
+      "license": "CC0-1.0",
+      "tags": [
+        "whoosh",
+        "transition",
+        "scene",
+        "soft"
+      ],
+      "notes": ""
+    }
+  ]
+}

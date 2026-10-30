@@ -1,0 +1,33 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  studio:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: studio
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: studio/package-lock.json
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - name: CLI smoke
+        run: |
+          node bin/motionmind.mjs help
+          node bin/motionmind.mjs setup "$RUNNER_TEMP/ws" --no-hyperframes-skill
+          node bin/motionmind.mjs music --out "$RUNNER_TEMP/a.wav" --duration 4
+          node bin/motionmind.mjs music --out "$RUNNER_TEMP/b.wav" --duration 4
+          cmp "$RUNNER_TEMP/a.wav" "$RUNNER_TEMP/b.wav"
+          HOME="$RUNNER_TEMP/home" node bin/motionmind.mjs sfx list --query whoosh
+      - run: npm pack --dry-run
