@@ -45,22 +45,22 @@ export default async function CampaignPage({ params }: { params: Promise<{ brand
       <div className="grid two">
         <section className="panel">
           <h2>PROGRESS.md</h2>
-          {c.progress ? <Markdown source={c.progress} /> : <p className="muted">Belum ada PROGRESS.md (dibuat oleh <code>motionmind init</code> atau agen).</p>}
+          {c.progress ? <Markdown source={c.progress} /> : <p className="muted">No PROGRESS.md yet (created by <code>motionmind init</code> or the agent).</p>}
         </section>
         <section className="panel">
-          <h2>LOG.md (terakhir)</h2>
-          {c.logTail.length ? <div className="log">{c.logTail.join("\n")}</div> : <p className="muted">Belum ada LOG.md.</p>}
+          <h2>LOG.md (latest)</h2>
+          {c.logTail.length ? <div className="log">{c.logTail.join("\n")}</div> : <p className="muted">No LOG.md yet.</p>}
         </section>
       </div>
 
       <section className="panel section">
         {c.tracked ? (
           <>
-            <h2>Proyek yang dilacak</h2>
+            <h2>Tracked project</h2>
             <p className="muted small" style={{ marginBottom: 14 }}>
-              <code>{c.tracked.dir}</code> · {c.tracked.engine} · {Date.parse(c.tracked.since) === 0 ? "termasuk render lama" : `sejak ${stamp(new Date(c.tracked.since))}`}. Setiap render baru{" "}
-              {c.tracked.engine === "hyperframes" ? <>di <code>renders/</code></> : <>(.mp4)</>} dicatat sebagai versi baru selama <code>motionmind ui</code> /{" "}
-              <code>motionmind watch</code> berjalan.
+              <code>{c.tracked.dir}</code> · {c.tracked.engine} · {Date.parse(c.tracked.since) === 0 ? "including existing renders" : `since ${stamp(new Date(c.tracked.since))}`}. Every new render{" "}
+              {c.tracked.engine === "hyperframes" ? <>in <code>renders/</code></> : <>(.mp4)</>} is logged as a new <code>staging</code> version while <code>motionmind ui</code> /{" "}
+              <code>motionmind watch</code> is running.
             </p>
             <div className="inline-form" style={{ alignItems: "flex-start" }}>
               {c.tracked.engine === "hyperframes" && <EditForm brand={brand} campaign={campaign} version="" editing={c.editing} />}
@@ -70,9 +70,9 @@ export default async function CampaignPage({ params }: { params: Promise<{ brand
           </>
         ) : (
           <details>
-            <summary>Lacak proyek luar (autolog)</summary>
+            <summary>Track an external project (autolog)</summary>
             <p className="muted small" style={{ margin: "12px 0 14px" }}>
-              Lacak folder proyek HyperFrames atau folder export supaya setiap render masuk ke campaign ini otomatis.
+              Track a HyperFrames project folder or an export folder so every render lands in this campaign automatically.
             </p>
             <TrackForm brands={listBrands()} campaigns={[campaign]} brand={brand} campaign={campaign} />
           </details>
@@ -81,14 +81,14 @@ export default async function CampaignPage({ params }: { params: Promise<{ brand
 
       <section className="panel section">
         <details>
-          <summary>TASTE.md — memori gaya campaign</summary>
-          {c.taste ? <Markdown source={c.taste} /> : <p className="muted">Belum ada TASTE.md.</p>}
+          <summary>TASTE.md — campaign style memory</summary>
+          {c.taste ? <Markdown source={c.taste} /> : <p className="muted">No TASTE.md yet.</p>}
         </details>
       </section>
 
       <section className="section">
-        <h2>Versi</h2>
-        {c.runs.length ? <RunsGallery runs={c.runs.map(toCard)} /> : <div className="empty">Belum ada run.</div>}
+        <h2>Versions</h2>
+        {c.runs.length ? <RunsGallery runs={c.runs.map(toCard)} /> : <div className="empty">No runs yet.</div>}
       </section>
     </>
   );

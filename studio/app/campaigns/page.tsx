@@ -5,9 +5,9 @@ import { campaignCategories, listCampaigns, mediaUrl, progressSummary } from "@/
 
 export const dynamic = "force-dynamic";
 
-export default async function CampaignsPage({ searchParams }: { searchParams: Promise<{ kategori?: string }> }) {
-  const { kategori } = await searchParams;
-  const active = CATEGORIES.find((c) => c.id === kategori) ?? null;
+export default async function CampaignsPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
+  const { category } = await searchParams;
+  const active = CATEGORIES.find((c) => c.id === category) ?? null;
   const campaigns = listCampaigns().map((c) => ({ ...c, categories: campaignCategories(c) }));
   const shown = active ? campaigns.filter((c) => c.categories.includes(active.id)) : campaigns;
   return (
@@ -16,18 +16,18 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
         <div>
           <h1>Campaigns</h1>
           <p className="lead">
-            Satu campaign = satu memori (<code>TASTE.md</code>, <code>PROGRESS.md</code>, <code>LOG.md</code>, <code>plan/</code>) dengan
-            banyak versi di <code>runs/</code>. Kategori mengikuti output run-nya; campaign tanpa output hanya muncul di &ldquo;Semua&rdquo;.
+            One campaign = one memory (<code>TASTE.md</code>, <code>PROGRESS.md</code>, <code>LOG.md</code>, <code>plan/</code>) with
+            many versions in <code>runs/</code>. Categories follow run output; campaigns without output only appear under &ldquo;All&rdquo;.
           </p>
         </div>
       </div>
       <div className="toolbar">
         <div className="chips">
           <Link href="/campaigns" className={`chip ${active ? "" : "on"}`}>
-            Semua · {campaigns.length}
+            All · {campaigns.length}
           </Link>
           {CATEGORIES.map((cat) => (
-            <Link key={cat.id} href={`/campaigns?kategori=${cat.id}`} className={`chip ${active?.id === cat.id ? "on" : ""}`}>
+            <Link key={cat.id} href={`/campaigns?category=${cat.id}`} className={`chip ${active?.id === cat.id ? "on" : ""}`}>
               {cat.label} · {campaigns.filter((c) => c.categories.includes(cat.id)).length}
             </Link>
           ))}
@@ -56,7 +56,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                 </div>
               )}
               <div className="small muted">
-                {c.runs.length} versi · terbaru <span className="mono">{latest?.version ?? "—"}</span>
+                {c.runs.length} version{c.runs.length === 1 ? "" : "s"} · latest <span className="mono">{latest?.version ?? "—"}</span>
               </div>
               {phase && (
                 <div className="small">
@@ -74,9 +74,9 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                     {categoryLabel(id)}
                   </span>
                 ))}
-                {!c.categories.length && <span className="pill stage-unlogged">belum ada output</span>}
-                {!c.taste && <span className="pill stage-staging">TASTE.md belum ada</span>}
-                {!c.progress && <span className="pill stage-staging">PROGRESS.md belum ada</span>}
+                {!c.categories.length && <span className="pill stage-unlogged">no output yet</span>}
+                {!c.taste && <span className="pill stage-staging">no TASTE.md</span>}
+                {!c.progress && <span className="pill stage-staging">no PROGRESS.md</span>}
               </div>
             </Link>
           );

@@ -3,7 +3,7 @@
 ## Music bed (no samples, deterministic)
 ```bash
 motionmind music --out src/assets/audio/music.wav --duration 15 --bpm 120 \
-  --sections 0:tense,2:groove,5:outro --bells 6.5,10 --duck 9.5:0.2
+  --sections "0:tense,2:groove,5:outro" --bells "6.5,10" --duck 9.5:0.2
 ```
 - `--sections bar:kind,…` — bar index where each section starts (one bar = 4 beats; 120 BPM → 2 s per bar).
   Kinds: `tense` (minor pad, ticking hats — problem), `calm` (pad + soft keys — explanation, VO beds), `groove`

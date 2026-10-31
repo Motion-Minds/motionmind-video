@@ -12,8 +12,9 @@ export default function VideoPage() {
       title="Video"
       lead={
         <>
-          Run yang punya file <code>.mp4</code>. Stage, resolusi, dan LUFS berasal dari <code>registry.json</code>; run yang belum
-          tercatat bisa di-log dari halaman run-nya.
+          Runs with an <code>.mp4</code> file. Stage, resolution and LUFS come from <code>registry.json</code>; unlogged runs can be logged
+          from their run page (as <code>staging</code> unless another stage is chosen). Production requires passing QA (−14 ±0.5 LUFS, true peak ≤
+          −1 dBFS) unless forced.
         </>
       }
       kpis={[
@@ -21,8 +22,8 @@ export default function VideoPage() {
         { label: "Production", value: logged.filter((r) => r.stage === "production").length },
         { label: "Staging", value: logged.filter((r) => r.stage === "staging").length },
         { label: "Archived", value: logged.filter((r) => r.stage === "archived").length },
-        { label: "Belum di-log", value: runs.length - logged.length },
-        { label: "Rata-rata LUFS", value: lufs.length ? (lufs.reduce((a, b) => a + b, 0) / lufs.length).toFixed(1) : "—" },
+        { label: "Not logged", value: runs.length - logged.length },
+        { label: "Average LUFS", value: lufs.length ? (lufs.reduce((a, b) => a + b, 0) / lufs.length).toFixed(1) : "—" },
       ]}
       runs={runs}
     />

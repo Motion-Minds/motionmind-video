@@ -13,10 +13,10 @@ type Doc = { label: string; group: string; files: string[] };
 function docs(): Record<string, Doc> {
   const skill = path.join(packageDir(), "skills", "motionmind");
   const list: Record<string, Doc> = {
-    skill: { label: "SKILL.md", group: "Skill motionmind", files: [path.join(skill, "SKILL.md")] },
+    skill: { label: "SKILL.md", group: "motionmind skill", files: [path.join(skill, "SKILL.md")] },
   };
   for (const [id, label] of [["workflow", "Workflow & gate"], ["hyperframes", "HyperFrames"], ["motion", "Motion"], ["sound", "Sound"], ["qa", "QA"], ["screen-demo", "Screen demo"]]) {
-    list[id] = { label, group: "Skill motionmind", files: [path.join(skill, "references", `${id}.md`)] };
+    list[id] = { label, group: "motionmind skill", files: [path.join(skill, "references", `${id}.md`)] };
   }
   for (const [id, file] of [["rules", "RULES.md"], ["skills", "MOTION-SKILLS.md"], ["agents", "AGENTS.md"]]) {
     list[id] = { label: file, group: "Hub", files: [path.join(/*turbopackIgnore: true*/ STORE_ROOT, file), path.join(/*turbopackIgnore: true*/ path.dirname(packageDir()), file)] };
@@ -29,16 +29,20 @@ export default async function DocsPage({ searchParams }: { searchParams: Promise
   const all = docs();
   const current = Object.hasOwn(all, doc) ? doc : "skill";
   const file = all[current]?.files.find((f) => fs.existsSync(f));
-  const source = file ? fs.readFileSync(file, "utf8").replace(/^---\n[\s\S]*?\n---\n/, "") : "_Dokumen tidak ditemukan._";
+  const source = file ? fs.readFileSync(file, "utf8").replace(/^---\n[\s\S]*?\n---\n/, "") : "_Document not found._";
   const groups = [...new Set(Object.values(all).map((d) => d.group))];
   return (
     <>
       <div className="page-head">
         <div>
-          <h1>Dokumentasi</h1>
+          <h1>Docs</h1>
           <p className="lead">
-            Skill <code>motionmind</code> dipakai agen AI (Claude Code, Codex, …) untuk membuat video dari terminal. Pasang di workspace dengan{" "}
-            <code>motionmind setup</code> atau <code>motionmind skill install</code>.
+            AI agents (Claude Code, Codex, …) use the <code>motionmind</code> skill to make videos from the terminal. Install it in a workspace with{" "}
+            <code>motionmind setup</code> or <code>motionmind skill install</code>.
+          </p>
+          <p className="lead">
+            <code>motionmind log</code> without <code>--stage</code> records the version as <code>staging</code>. Promoting to <code>production</code>{" "}
+            requires passing QA (−14 ±0.5 LUFS integrated, true peak ≤ −1 dBFS) unless forced with <code>--force</code>.
           </p>
         </div>
       </div>

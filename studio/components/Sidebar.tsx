@@ -11,7 +11,7 @@ const ICONS: Record<string, React.ReactNode> = {
       <path d="M10 9.5v5l4.5-2.5z" fill="currentColor" stroke="none" />
     </>
   ),
-  gambar: (
+  image: (
     <>
       <rect x="3" y="4" width="18" height="16" rx="3" />
       <circle cx="9" cy="9.5" r="1.8" />
@@ -60,7 +60,9 @@ export function Sidebar({ counts, runCategories }: SidebarProps) {
       ? "all"
       : pathname.startsWith("/campaigns") || pathname.startsWith("/c/")
         ? "campaigns"
-        : (["video", "gambar", "compare", "docs", "new", "starter"].find((s) => pathname.startsWith(`/${s}`)) ?? null));
+        : (CATEGORIES.find((c) => pathname.startsWith(c.href))?.id ??
+          ["compare", "docs", "new", "starter"].find((s) => pathname.startsWith(`/${s}`)) ??
+          null));
 
   const item = (id: string, href: string, label: string, count?: number) => (
     <Link key={id} href={href} className={`side-link ${section === id ? "active" : ""}`}>
@@ -84,24 +86,24 @@ export function Sidebar({ counts, runCategories }: SidebarProps) {
       </Link>
 
       <Link href="/new" className={`btn primary side-cta ${section === "new" ? "active" : ""}`}>
-        + Versi baru
+        + New version
       </Link>
 
       <nav className="side-nav">
         <div className="side-group">
-          <span className="side-label">Kategori</span>
+          <span className="side-label">Categories</span>
           {CATEGORIES.map((c) => item(c.id, c.href, c.label, counts[c.id]))}
         </div>
         <div className="side-group">
           <span className="side-label">Workspace</span>
           {item("starter", "/starter", "Starter kit")}
-          {item("all", "/", "Semua run", counts.all)}
+          {item("all", "/", "All runs", counts.all)}
           {item("campaigns", "/campaigns", "Campaigns", counts.campaigns)}
           {item("compare", "/compare", "Compare video")}
         </div>
         <div className="side-group">
-          <span className="side-label">Referensi</span>
-          {item("docs", "/docs", "Dokumentasi")}
+          <span className="side-label">Reference</span>
+          {item("docs", "/docs", "Docs")}
         </div>
       </nav>
     </aside>

@@ -1,20 +1,20 @@
 ---
-title: Feed Instagram / carousel
-description: Poster atau carousel statis dengan skill taste Figma brand. Masuk kategori Gambar.
-category: gambar
+title: Instagram feed / carousel
+description: Static poster or carousel using the brand's Figma taste skill. Listed in the Images category.
+category: image
 order: 4
 fields: brand, campaign, slides, goal, cta, content, refs, extra
 ---
-/skill:{{brand}}-figma-taste Ikuti AGENTS.md workspace ini (deliverable statis: DELIVERY.md, tanpa motionmind log).
+/skill:{{brand}}-figma-taste Follow this workspace's AGENTS.md (static deliverable: DELIVERY.md, no motionmind log).
 
-Campaign: {{brand}}/{{campaign}}, run v1-first-cut di projects/{{brand}}/{{campaign}}/runs/
-Jumlah slide: {{slides}} · ukuran 1080 × 1350 (4:5)
-Pesan utama: {{goal}}
+Campaign: {{brand}}/{{campaign}}, run v1-first-cut in projects/{{brand}}/{{campaign}}/runs/
+Slides: {{slides}} · size 1080 × 1350 (4:5)
+Key message: {{goal}}
 CTA: {{cta}}
-Isi per slide / halaman produk: {{content}}
-Referensi: {{refs}}
+Content per slide / product page: {{content}}
+References: {{refs}}
 
-Utamakan Figma MCP; kalau belum tersambung atau kuota habis, pakai jalur cadangan build.cjs + figma-importer.
-Tunjukkan copy per slide dulu sebelum desain.
+Prefer Figma MCP; if it isn't connected or the quota is exhausted, use the build.cjs + figma-importer fallback.
+Show the copy for each slide before designing.
 
-Tambahan: {{extra}}
+Extra: {{extra}}

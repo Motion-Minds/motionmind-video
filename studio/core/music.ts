@@ -145,7 +145,7 @@ function parseList(spec: string, what: string, parts: number): number[][] {
     .filter((s) => s)
     .map((item) => {
       const values = item.split(":").map(Number);
-      if (values.length !== parts || values.some((v) => !Number.isFinite(v))) throw new UserError(`Format ${what} tidak valid: '${item}'`);
+      if (values.length !== parts || values.some((v) => !Number.isFinite(v))) throw new UserError(`Invalid ${what} format: '${item}'`);
       return values;
     });
 }
@@ -174,14 +174,14 @@ function writeWav(file: string, music: Stereo, n: number) {
 
 export async function musicBed(opts: MusicOptions): Promise<{ lines: string[] }> {
   const { out, duration: dur, bpm = 120, sections: sectionSpec = "0:groove", bells = "", duck: duckSpec = "", seed = 817 } = opts;
-  if (!(dur > 0)) throw new UserError("--duration harus angka detik > 0.");
-  if (!(bpm > 0)) throw new UserError("--bpm harus angka > 0.");
-  if (!Number.isInteger(seed)) throw new UserError("--seed harus bilangan bulat.");
+  if (!(dur > 0)) throw new UserError("--duration must be a number of seconds > 0.");
+  if (!(bpm > 0)) throw new UserError("--bpm must be a number > 0.");
+  if (!Number.isInteger(seed)) throw new UserError("--seed must be an integer.");
   const sections = sectionSpec
     .split(",")
     .map((s) => {
       const [b, kind, ...extra] = s.split(":");
-      if (extra.length || !/^\d+$/.test(b ?? "") || !KINDS[kind ?? ""]) throw new UserError(`Section tidak valid: '${s}' (format bar:kind, kind = tense|calm|groove|lift|outro)`);
+      if (extra.length || !/^\d+$/.test(b ?? "") || !KINDS[kind ?? ""]) throw new UserError(`Invalid section: '${s}' (format bar:kind — bar number counted from 0, not seconds; kind = tense|calm|groove|lift|outro)`);
       return [Number(b), kind] as const;
     })
     .sort((a, b) => a[0] - b[0] || (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0));

@@ -2,7 +2,7 @@ import { galleryCards } from "@/lib/cards";
 import type { Run } from "@/lib/hub";
 import { RunsGallery } from "./RunsGallery";
 
-/** Page body shared by "Semua run", "Video" and "Gambar": heading, KPI tiles, filterable gallery. */
+/** Page body shared by "All runs", "Video" and "Images": heading, KPI tiles, filterable gallery. */
 export function RunsOverview({ title, lead, kpis, runs }: { title: string; lead: React.ReactNode; kpis: { label: string; value: React.ReactNode }[]; runs: Run[] }) {
   return (
     <>

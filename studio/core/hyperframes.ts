@@ -1,4 +1,5 @@
 // HyperFrames engine adapter: detect a project, read its parameters, and drive the pinned CLI (init, preview, render).
+import type { ExecFileOptions } from "node:child_process";
 import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
@@ -24,6 +25,26 @@ export interface EditLock {
 
 export const env = () => ({ ...process.env, HYPERFRAMES_NO_TELEMETRY: "1", DO_NOT_TRACK: "1", HYPERFRAMES_SKIP_SKILLS: "1" });
 
+/**
+ * npm's own npx entry script, for Windows: there `npx` is `npx.cmd`, which execFile cannot start (Node refuses .cmd
+ * without a shell, and a shell would split paths containing spaces). Lookup order follows npx.cmd: a globally
+ * upgraded npm, the npm bundled next to this node, then the npm next to any npx.cmd on PATH.
+ */
+function npxCli(): string | null {
+  const prefix = process.env.npm_config_prefix ?? (process.env.APPDATA ? path.join(process.env.APPDATA, "npm") : null);
+  const onPath = (process.env.PATH ?? "").split(path.delimiter).filter((d) => d && isFile(path.join(d, "npx.cmd")));
+  const dirs = [...(prefix ? [prefix] : []), path.dirname(process.execPath), ...onPath];
+  return dirs.map((d) => path.join(d, "node_modules", "npm", "bin", "npx-cli.js")).find(isFile) ?? null;
+}
+
+/** Run `npx <args>` on every platform. */
+export function runNpx(args: string[], opts: ExecFileOptions) {
+  if (process.platform !== "win32") return run("npx", args, opts);
+  const cli = npxCli();
+  if (!cli) return Promise.reject(new UserError("npx not found: install Node.js with npm (https://nodejs.org)."));
+  return run(process.execPath, [cli, ...args], opts);
+}
+
 export function isProject(dir: string): boolean {
   if (isFile(path.join(dir, "hyperframes.json"))) return true;
   const index = path.join(dir, "index.html");
@@ -38,7 +59,7 @@ export function versionOf(dir: string): string {
 
 export async function npx(dir: string, args: string[], timeout = 900_000) {
   try {
-    const { stdout, stderr } = await run("npx", ["-y", `hyperframes@${versionOf(dir)}`, ...args], { cwd: dir, env: env(), timeout, maxBuffer: 64 * 1024 * 1024 });
+    const { stdout, stderr } = await runNpx(["-y", `hyperframes@${versionOf(dir)}`, ...args], { cwd: dir, env: env(), timeout, maxBuffer: 64 * 1024 * 1024 });
     return { ok: true, output: `${stdout}${stderr}` };
   } catch (err) {
     const e = err as { stdout?: string; stderr?: string; message: string };
@@ -78,9 +99,9 @@ export function copyProject(from: string, to: string) {
 }
 
 export async function init(runDir: string, resolution: string) {
-  const res = await run("npx", ["-y", `hyperframes@${HF_VERSION}`, "init", "src", "--example", "blank", "--resolution", resolution, "--non-interactive", "--skip-skills"],
-    { cwd: runDir, env: env() }).then((r) => ({ ok: true, out: r.stdout + r.stderr }), (e) => ({ ok: false, out: `${e.stdout ?? ""}${e.stderr ?? ""}` || e.message }));
-  if (!res.ok || !isFile(path.join(runDir, "src", "hyperframes.json"))) throw new UserError(`hyperframes init gagal:\n${res.out}`);
+  const res = await runNpx(["-y", `hyperframes@${HF_VERSION}`, "init", "src", "--example", "blank", "--resolution", resolution, "--non-interactive", "--skip-skills"],
+    { cwd: runDir, env: env() }).then((r) => ({ ok: true, out: `${r.stdout}${r.stderr}` }), (e) => ({ ok: false, out: `${e.stdout ?? ""}${e.stderr ?? ""}` || e.message }));
+  if (!res.ok || !isFile(path.join(runDir, "src", "hyperframes.json"))) throw new UserError(`hyperframes init failed:\n${res.out}`);
 }
 
 /** Pin the CLI version in package.json so the snapshot re-renders with the same HyperFrames. */
@@ -115,7 +136,7 @@ async function freePort(start = 3200): Promise<number> {
     s.listen(port, "127.0.0.1");
     if (await promise) return port;
   }
-  throw new UserError("Tidak ada port kosong untuk preview HyperFrames.");
+  throw new UserError("No free port for the HyperFrames preview.");
 }
 
 /** Start HyperFrames Studio for `dir` in the background and write the edit lock. */
@@ -129,7 +150,7 @@ export async function openEditor(dir: string, lockFile: string): Promise<EditLoc
   const pid = Number(/PID (\d+)/.exec(status.output)?.[1]);
   if (!res.ok || !url || !pid) {
     await npx(dir, ["preview", "--stop"], 60_000);
-    throw new UserError(`Preview HyperFrames gagal dijalankan:\n${res.output}${status.output}`);
+    throw new UserError(`HyperFrames preview failed to start:\n${res.output}${status.output}`);
   }
   const lock: EditLock = { pid, port, url, started_at: stamp(), dir };
   fs.writeFileSync(lockFile, JSON.stringify(lock, null, 2) + "\n");
@@ -146,5 +167,5 @@ export async function render(dir: string, out: string, crf = 18) {
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.rmSync(out, { force: true });
   const res = await npx(dir, ["render", "-o", out, "--crf", String(crf), "--quiet"]);
-  if (!res.ok || !isFile(out)) throw new UserError(`Render gagal:\n${res.output.slice(-6000)}`);
+  if (!res.ok || !isFile(out)) throw new UserError(`Render failed:\n${res.output.slice(-6000)}`);
 }

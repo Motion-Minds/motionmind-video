@@ -44,8 +44,8 @@ motionmind edit <brand>/<campaign> v<N>-<slug> [--stop]     # HyperFrames Studio
 motionmind render <brand>/<campaign> v<N>-<slug>            # video.mp4 + contact-sheet.png, updates a logged run
 motionmind log projects/<brand>/<campaign>/runs/<v>/video.mp4 --campaign <brand>/<campaign> \
   --stage staging --title "…" --param concept_name="…" --param hook_copy="…" --param cta_copy="…"
-motionmind promote <run_id> --stage production
-motionmind music --out src/assets/audio/music.wav --duration 15 --bpm 120 --sections 0:tense,2:groove,5:outro
+motionmind promote <run_id> --stage production             # refused while QA fails; --force only on the user's explicit say-so
+motionmind music --out src/assets/audio/music.wav --duration 15 --bpm 120 --sections "0:tense,2:groove,5:outro"  # bars, not seconds
 motionmind sfx list [--query click]                         # licensed sound catalogue; copy what you use into the run
 motionmind list · motionmind compare <a> <b>
 ```
@@ -62,8 +62,9 @@ Inside a run's `src/`: `npx hyperframes@<pinned> check` and `npx hyperframes@<pi
   between frames. Same render twice = identical pixels.
 - **Look at your output.** After every build step open the snapshot frames; after render open the contact sheet.
   Never report a video as done without having looked at it.
-- **Loudness.** −14 LUFS integrated, true peak ≤ −1 dBFS, measured from the rendered file (`motionmind render`/`log`
-  print it). HyperFrames does not normalise: set the master gain on the root (see `references/sound.md`).
+- **Loudness.** −14 LUFS ±0.5 integrated, true peak ≤ −1 dBFS, measured from the rendered file (`motionmind render`/`log`
+  print it and warn on a miss; `promote --stage production` refuses it). HyperFrames does not normalise: set the master
+  gain on the root (see `references/sound.md`). Never pass `--force` to get past QA unless the user asks for it.
 - **9:16 safe area.** Headlines, UI and CTA inside y 285–1635 (the 4:5 centre crop); CTA held still ≥ 1.5 s at the end.
 - **Record before you say done.** A rendered version is not finished until `motionmind log` (or `render` on a logged
   run) has written it to the registry.

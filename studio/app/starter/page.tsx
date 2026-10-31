@@ -11,8 +11,8 @@ export default function StarterPage() {
         <div>
           <h1>Starter kit</h1>
           <p className="lead">
-            Pilih jenis tugas, isi yang perlu, tambahkan perintahmu sendiri, lalu salin prompt-nya ke agen. Aturan studio (SOP Hukum #4, aset brand, SFX,
-            kunci edit) sudah termasuk di dalam kit.
+            Pick a task type, fill in what it needs, add your own instructions, then copy the prompt to your agent. Studio rules (SOP Rule #4, brand
+            assets, SFX, edit lock) are already built into each kit.
           </p>
         </div>
       </div>

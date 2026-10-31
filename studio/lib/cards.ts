@@ -1,10 +1,11 @@
 import type { RunCard } from "@/components/RunsGallery";
+import { qaIssues } from "@/core/qa";
 import { aspectOf, mediaUrl, type Run } from "./hub";
 
 export function toCard(run: Run): RunCard {
   const reg = run.registry;
   const m = reg?.metrics;
-  const spec = m?.width ? `${m.width}×${m.height} · ${m.fps}fps · ${m.duration_s}s` : run.kind === "gambar" ? `${run.images.length} gambar` : aspectOf(run);
+  const spec = m?.width ? `${m.width}×${m.height} · ${m.fps}fps · ${m.duration_s}s` : run.kind === "image" ? `${run.images.length} image${run.images.length === 1 ? "" : "s"}` : aspectOf(run);
   return {
     key: run.dir,
     href: `/r/${run.brand}/${run.campaign}/${run.version}`,
@@ -19,6 +20,7 @@ export function toCard(run: Run): RunCard {
     aspect: aspectOf(run),
     spec,
     lufs: m?.integrated_lufs ?? null,
+    qaIssues: m && run.mp4 ? qaIssues(m) : [],
   };
 }
 

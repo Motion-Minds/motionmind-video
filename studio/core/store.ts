@@ -187,7 +187,7 @@ export class Store {
     const resolved = path.resolve(abs);
     for (const repo of this.protectedRepos()) {
       if (resolved === repo || resolved.startsWith(repo + path.sep)) {
-        throw new UserError(`Rule #1: '${resolved}' berada di dalam repo produk '${repo}' yang read-only. Simpan output di '${this.path("projects")}'.`);
+        throw new UserError(`Rule #1: '${resolved}' is inside the read-only product repo '${repo}'. Save output under '${this.path("projects")}'.`);
       }
     }
   }
@@ -196,7 +196,7 @@ export class Store {
 export function parseCampaign(value: string): { brand: string; name: string; campaign: string } {
   const [brand, name, ...rest] = value.split("/");
   if (!brand || !name || rest.length || !SLUG.test(brand) || !SLUG.test(name)) {
-    throw new UserError(`Campaign harus berbentuk <brand>/<campaign> dengan huruf kecil, angka, tanda minus (mis. demo/promo-15s): '${value}'`);
+    throw new UserError(`Campaign must look like <brand>/<campaign> using lowercase letters, digits and dashes (e.g. demo/promo-15s): '${value}'`);
   }
   return { brand, name, campaign: `${brand}/${name}` };
 }
@@ -225,7 +225,7 @@ function withLock<T>(lockFile: string, fn: () => T): T {
       if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
       const owner = Number(fs.readFileSync(lockFile, "utf8"));
       if (owner && !pidAlive(owner)) fs.rmSync(lockFile, { force: true });
-      else if (Date.now() > deadline) throw new UserError(`Registry terkunci oleh PID ${owner} (${lockFile}).`);
+      else if (Date.now() > deadline) throw new UserError(`Registry is locked by PID ${owner} (${lockFile}).`);
       else Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
     }
   }

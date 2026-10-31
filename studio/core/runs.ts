@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import * as hf from "./hyperframes.ts";
 import { aspectOf, contactSheet, probe, sha256 } from "./media.ts";
+import { qaIssues } from "./qa.ts";
 import {
   defaultRunId, expandHome, isDir, isFile, listDirs, nextVersionNumber, packageDir, parseCampaign, stamp, Store, VERSION, UserError,
   type Engine, type RegistryRun, type RunSource, type Stage, type TrackedProject,
@@ -17,7 +18,7 @@ export interface Result {
 /** Campaign memory template: the store's own templates/ first, else the package default. */
 function campaignTemplate(store: Store, name: string, campaign: string): string {
   const file = [store.path("templates", name), path.join(packageDir(), "templates", name)].find(isFile);
-  if (!file) throw new UserError(`Template ${name} tidak ditemukan.`);
+  if (!file) throw new UserError(`Template ${name} not found.`);
   return fs.readFileSync(file, "utf8").replaceAll("{{project}}", campaign);
 }
 
@@ -27,7 +28,7 @@ function ensureCampaignMemory(store: Store, campaign: string, version: string): 
     ["TASTE.md", () => campaignTemplate(store, "TASTE.md", campaign)],
     ["PROGRESS.md", () =>
       `# PROGRESS – ${campaign}   (updated ${stamp()})\nPhase: brief\nCurrent version: ${version} → runs/${version}/video.mp4\n` +
-      "Done: -\nIn progress: -\nNext step: lengkapi brief di TASTE.md §1\nOpen issues / user feedback not yet fixed: -\nApprovals: -\n" +
+      "Done: -\nIn progress: -\nNext step: complete the brief in TASTE.md §1\nOpen issues / user feedback not yet fixed: -\nApprovals: -\n" +
       `Key files: TASTE.md, plan/design.html, runs/${version}/src/\n`],
     ["LOG.md", () => `# LOG – ${campaign}\n\n`],
     ["plan/design.html", () => campaignTemplate(store, "design.html", campaign)],
@@ -44,16 +45,16 @@ function ensureCampaignMemory(store: Store, campaign: string, version: string): 
 }
 
 function newRunDir(store: Store, campaign: string, version: string): string {
-  if (!VERSION.test(version)) throw new UserError(`Versi harus berbentuk v<N>-<slug>, mis. v1-first-cut: '${version}'`);
+  if (!VERSION.test(version)) throw new UserError(`Version must look like v<N>-<slug>, e.g. v1-first-cut: '${version}'`);
   const dir = store.runDir(campaign, version);
   store.assertWritable(dir);
-  if (fs.existsSync(dir)) throw new UserError(`Run '${store.rel(dir)}' sudah ada. Versi lama tidak boleh ditimpa; buat v<N+1> baru.`);
+  if (fs.existsSync(dir)) throw new UserError(`Run '${store.rel(dir)}' already exists. Finished versions are never overwritten; create a new v<N+1>.`);
   return dir;
 }
 
 function breakdownStub(store: Store, runDir: string, campaign: string, version: string, engine: string): string {
   const file = path.join(runDir, "breakdown.md");
-  fs.writeFileSync(file, `# Breakdown — ${campaign} (${version})\n\n- **Skill / Engine:** \`${engine}\`\n\n| Detik | Scene | Animasi & easing | SFX |\n|---|---|---|---|\n`);
+  fs.writeFileSync(file, `# Breakdown — ${campaign} (${version})\n\n- **Skill / Engine:** \`${engine}\`\n\n| Time | Scene | Motion & easing | SFX |\n|---|---|---|---|\n`);
   return store.rel(file);
 }
 
@@ -64,14 +65,14 @@ function seedBrandAssets(store: Store, brand: string, src: string): string[] {
     if (!isDir(origin) || !fs.readdirSync(origin).some((n) => !n.startsWith("."))) return [];
     const dst = path.join(src, "assets", "brand", kind);
     fs.cpSync(origin, dst, { recursive: true, filter: (p) => p === origin || !path.basename(p).startsWith(".") });
-    return [`${store.rel(dst)}/ (salinan shared/brands/${brand}/${kind})`];
+    return [`${store.rel(dst)}/ (copy of shared/brands/${brand}/${kind})`];
   });
 }
 
 export async function initRun(store: Store, opts: { campaign: string; version: string; resolution?: string }): Promise<Result> {
   const { brand, campaign } = parseCampaign(opts.campaign);
   const resolution = opts.resolution ?? "portrait";
-  if (!(hf.HF_RESOLUTIONS as readonly string[]).includes(resolution)) throw new UserError(`Resolusi tidak dikenal: ${resolution}`);
+  if (!(hf.HF_RESOLUTIONS as readonly string[]).includes(resolution)) throw new UserError(`Unknown resolution: ${resolution}`);
   const runDir = newRunDir(store, campaign, opts.version);
   store.ensure();
   const created = ensureCampaignMemory(store, campaign, opts.version);
@@ -83,11 +84,11 @@ export async function initRun(store: Store, opts: { campaign: string; version: s
     fs.rmSync(runDir, { recursive: true, force: true });
     throw err;
   }
-  created.push(`${store.rel(src)}/ (proyek HyperFrames ${hf.HF_VERSION}, ${resolution})`, ...seedBrandAssets(store, brand, src));
+  created.push(`${store.rel(src)}/ (HyperFrames ${hf.HF_VERSION} project, ${resolution})`, ...seedBrandAssets(store, brand, src));
   created.push(breakdownStub(store, runDir, campaign, opts.version, `hyperframes ${hf.HF_VERSION}`));
   store.appendLog(campaign, `init ${opts.version} · engine: hyperframes ${hf.HF_VERSION} (${resolution}) · runs/${opts.version}/ · ok`);
   return {
-    lines: [`Run baru: ${store.rel(runDir)}`, ...created.map((c) => `  + ${c}`)],
+    lines: [`New run: ${store.rel(runDir)}`, ...created.map((c) => `  + ${c}`)],
     href: `/r/${campaign}/${opts.version}`,
   };
 }
@@ -95,11 +96,11 @@ export async function initRun(store: Store, opts: { campaign: string; version: s
 /** Copy an existing HyperFrames project (e.g. from the desktop app) into a new run's src/. */
 export async function importRun(store: Store, opts: { source: string; campaign: string; version: string }): Promise<Result> {
   const origin = path.resolve(expandHome(opts.source));
-  if (!hf.isProject(origin)) throw new UserError(`'${origin}' bukan proyek HyperFrames (butuh index.html dengan data-composition-id).`);
+  if (!hf.isProject(origin)) throw new UserError(`'${origin}' is not a HyperFrames project (needs an index.html with data-composition-id).`);
   const { campaign } = parseCampaign(opts.campaign);
   const runDir = newRunDir(store, campaign, opts.version);
   if (origin === runDir || runDir.startsWith(origin + path.sep) || origin.startsWith(runDir + path.sep)) {
-    throw new UserError("Sumber import tidak boleh berada di dalam atau di atas run tujuan.");
+    throw new UserError("The import source must not be inside or above the target run.");
   }
   store.ensure();
   const created = ensureCampaignMemory(store, campaign, opts.version);
@@ -107,10 +108,10 @@ export async function importRun(store: Store, opts: { source: string; campaign: 
   hf.copyProject(origin, src);
   hf.pin(src);
   const files = fs.readdirSync(src, { recursive: true }).filter((f) => isFile(path.join(src, String(f)))).length;
-  created.push(`${store.rel(src)}/ (${files} file dari ${origin}, hyperframes@${hf.versionOf(src)})`);
+  created.push(`${store.rel(src)}/ (${files} files from ${origin}, hyperframes@${hf.versionOf(src)})`);
   created.push(breakdownStub(store, runDir, campaign, opts.version, `hyperframes ${hf.versionOf(src)} (import)`));
-  store.appendLog(campaign, `import ${opts.version} · dari ${origin} · hyperframes ${hf.versionOf(src)} · runs/${opts.version}/src/ · ${files} file`);
-  return { lines: [`Run hasil import: ${store.rel(runDir)}`, ...created.map((c) => `  + ${c}`)], href: `/r/${campaign}/${opts.version}` };
+  store.appendLog(campaign, `import ${opts.version} · from ${origin} · hyperframes ${hf.versionOf(src)} · runs/${opts.version}/src/ · ${files} files`);
+  return { lines: [`Imported run: ${store.rel(runDir)}`, ...created.map((c) => `  + ${c}`)], href: `/r/${campaign}/${opts.version}` };
 }
 
 /** Target of edit/render: a run's src/ (version given) or the tracked project's own folder (no version). */
@@ -118,12 +119,12 @@ function editTarget(store: Store, campaign: string, version?: string): { dir: st
   if (version) {
     const runDir = store.runDir(campaign, version);
     const src = path.join(runDir, "src");
-    if (!hf.isProject(src)) throw new UserError(`'${store.rel(runDir)}' bukan run HyperFrames (src/ tidak berisi proyek HyperFrames).`);
+    if (!hf.isProject(src)) throw new UserError(`'${store.rel(runDir)}' is not a HyperFrames run (src/ holds no HyperFrames project).`);
     return { dir: src, lock: path.join(runDir, hf.EDIT_LOCK), label: version };
   }
   const tracked = findTracked(store, campaign);
-  if (!tracked) throw new UserError(`Campaign '${campaign}' tidak melacak proyek; sebutkan versinya atau jalankan \`motionmind track\` dulu.`);
-  if (tracked.engine !== "hyperframes") throw new UserError(`Proyek '${tracked.dir}' bukan proyek HyperFrames.`);
+  if (!tracked) throw new UserError(`Campaign '${campaign}' tracks no project; give a version or run \`motionmind track\` first.`);
+  if (tracked.engine !== "hyperframes") throw new UserError(`Project '${tracked.dir}' is not a HyperFrames project.`);
   return { dir: tracked.dir, lock: path.join(store.campaignDir(campaign), hf.EDIT_LOCK), label: tracked.dir };
 }
 
@@ -132,20 +133,20 @@ export async function editRun(store: Store, opts: { campaign: string; version?: 
   const t = editTarget(store, campaign, opts.version);
   if (opts.stop) {
     await hf.closeEditor(t.dir, t.lock);
-    store.appendLog(campaign, `edit selesai ${t.label} · HyperFrames Studio ditutup · lock dilepas`);
-    return { lines: [`Editor ditutup; ${t.label} bisa diubah agen lagi. Sebelum mengubah file, jalankan \`npx hyperframes history\` di ${t.dir}.`] };
+    store.appendLog(campaign, `edit done ${t.label} · HyperFrames Studio closed · lock released`);
+    return { lines: [`Editor closed; the agent may change ${t.label} again. Before editing files, run \`npx hyperframes history\` in ${t.dir}.`] };
   }
   const existing = hf.readLock(t.lock);
-  if (existing) return { lines: [`Sudah terbuka: ${existing.url} (PID ${existing.pid}, sejak ${existing.started_at})`], href: existing.url };
+  if (existing) return { lines: [`Already open: ${existing.url} (PID ${existing.pid}, since ${existing.started_at})`], href: existing.url };
   const lock = await hf.openEditor(t.dir, t.lock);
-  store.appendLog(campaign, `edit mulai ${t.label} · HyperFrames Studio ${lock.url} · agen jangan ubah file sampai \`motionmind edit --stop\``);
+  store.appendLog(campaign, `edit start ${t.label} · HyperFrames Studio ${lock.url} · agent must not change files until \`motionmind edit --stop\``);
   return { lines: [`HyperFrames Studio: ${lock.url}`], href: lock.url };
 }
 
 export async function renderRun(store: Store, opts: { campaign: string; version?: string; crf?: number }): Promise<Result> {
   const { campaign } = parseCampaign(opts.campaign);
   const t = editTarget(store, campaign, opts.version);
-  const warn = hf.readLock(t.lock) ? ["Peringatan: proyek sedang terbuka di HyperFrames Studio; render memakai file yang sudah tersimpan."] : [];
+  const warn = hf.readLock(t.lock) ? ["Warning: the project is open in HyperFrames Studio; the render uses the files saved so far."] : [];
 
   if (!opts.version) {
     // Tracked project: render into its own renders/ folder (as HyperFrames does), then log the file as a new run.
@@ -164,10 +165,13 @@ export async function renderRun(store: Store, opts: { campaign: string; version?
   const m = await probe(video);
   await contactSheet(video, path.join(runDir, "contact-sheet.png"), m.duration_s);
   store.appendLog(campaign, `render ${opts.version} · hyperframes ${hf.versionOf(t.dir)} crf ${opts.crf ?? 18} · video.mp4 + contact-sheet.png · ${m.width}x${m.height} ${m.duration_s} s, ${m.integrated_lufs} LUFS / TP ${m.true_peak_dbfs}`);
+  const issues = qaIssues(m);
   const lines = [...warn, `${store.rel(video)} · ${m.width}x${m.height} · ${m.duration_s} s · ${m.size_mb} MB · ${m.integrated_lufs ?? "—"} LUFS · TP ${m.true_peak_dbfs ?? "—"} dBFS`];
-  // An already-logged run keeps its stage/title; only the measurements of the new file are refreshed.
+  // An already-logged run keeps its stage/title and gets the measurements of the new file, except that a production
+  // run whose new render fails QA drops back to staging (production only ever holds QA-passing or forced renders).
   const hash = await sha256(video);
   const runRel = store.rel(runDir);
+  let demoted = false;
   const updated = store.updateRegistry((reg) => {
     const entry = reg.runs.find((r) => r.run_dir === runRel);
     if (!entry) return null;
@@ -175,9 +179,17 @@ export async function renderRun(store: Store, opts: { campaign: string; version?
     entry.hashes = { ...entry.hashes, mp4_sha256: hash };
     entry.artifacts = { ...entry.artifacts, mp4: store.rel(video), contact_sheet: store.rel(path.join(runDir, "contact-sheet.png")) };
     entry.params = { ...entry.params, ...hf.params(t.dir) };
+    if (entry.stage === "production" && issues.length) {
+      entry.stage = "staging";
+      demoted = true;
+    }
     return entry;
   });
-  lines.push(updated ? `Registry '${updated.run_id}' diperbarui (stage tetap ${updated.stage}).` : `${runRel}/contact-sheet.png · lalu \`motionmind log\`.`);
+  if (updated && demoted) {
+    store.appendLog(campaign, `demote ${opts.version} · ${updated.run_id} → staging · new render fails QA: ${issues.join("; ")}`);
+    lines.push(`QA: ${issues.join(" · ")} — '${updated.run_id}' moved from production back to staging; fix and re-render, or promote with --force.`);
+  } else lines.push(...qaWarning(issues));
+  lines.push(updated ? `Registry '${updated.run_id}' updated (stage ${updated.stage}).` : `${runRel}/contact-sheet.png · then \`motionmind log\`.`);
   return { lines, runId: updated?.run_id };
 }
 
@@ -199,6 +211,8 @@ export interface LogOptions {
   breakdown?: string;
   design?: string;
   source?: RunSource;
+  /** Log as production even when the measured video fails QA. */
+  force?: boolean;
 }
 
 const toRel = (store: Store, p: string | undefined | null) => {
@@ -216,7 +230,13 @@ function slugTime(d: Date) {
 export async function logVideo(store: Store, opts: LogOptions): Promise<Result> {
   const { campaign } = parseCampaign(opts.campaign);
   const videoIn = path.resolve(store.root, expandHome(opts.video));
-  if (!isFile(videoIn)) throw new UserError(`Video tidak ditemukan: ${videoIn}`);
+  if (!isFile(videoIn)) throw new UserError(`Video not found: ${videoIn}`);
+  const stage = opts.stage ?? "staging";
+  // Measured before anything is copied, so a production log that fails QA leaves nothing behind.
+  const metrics = await probe(videoIn);
+  const issues = qaIssues(metrics);
+  const overridden = stage === "production" && issues.length > 0;
+  if (overridden && !opts.force) throw qaError(path.basename(videoIn), issues);
   store.ensure();
 
   const campaignRuns = store.campaignDir(campaign) + path.sep + "runs" + path.sep;
@@ -226,7 +246,7 @@ export async function logVideo(store: Store, opts: LogOptions): Promise<Result> 
   if (videoIn.startsWith(campaignRuns)) {
     // Already inside one of this campaign's runs (authored in the store): log in place.
     version = videoIn.slice(campaignRuns.length).split(path.sep)[0];
-    if (opts.version && opts.version !== version) throw new UserError(`Video berada di run ${version}, bukan ${opts.version}.`);
+    if (opts.version && opts.version !== version) throw new UserError(`The video is in run ${version}, not ${opts.version}.`);
     runDir = store.runDir(campaign, version);
     video = videoIn;
   } else {
@@ -235,16 +255,16 @@ export async function logVideo(store: Store, opts: LogOptions): Promise<Result> 
     runDir = newRunDir(store, campaign, version);
     fs.mkdirSync(runDir, { recursive: true });
     video = path.join(runDir, "video.mp4");
-    fs.copyFileSync(videoIn, video);
+    // A copy-on-write clone where the filesystem supports it (APFS, btrfs, XFS): no second copy on disk.
+    fs.copyFileSync(videoIn, video, fs.constants.COPYFILE_FICLONE);
     if (opts.src) {
       const src = path.resolve(expandHome(opts.src));
-      if (!isDir(src)) throw new UserError(`Folder proyek tidak ditemukan: ${src}`);
+      if (!isDir(src)) throw new UserError(`Project folder not found: ${src}`);
       hf.copyProject(src, path.join(runDir, "src"));
       if (hf.isProject(src)) hf.pin(path.join(runDir, "src"));
     }
   }
 
-  const metrics = await probe(video);
   let sheet = toRel(store, opts.sheet) ?? toRel(store, path.join(runDir, "contact-sheet.png"));
   if (!sheet) {
     await contactSheet(video, path.join(runDir, "contact-sheet.png"), metrics.duration_s);
@@ -255,7 +275,6 @@ export async function logVideo(store: Store, opts: LogOptions): Promise<Result> 
   const aspect = aspectOf(metrics);
   const runId = opts.runId ?? defaultRunId(campaign, version);
   const runRel = store.rel(runDir);
-  const stage = opts.stage ?? "staging";
   const hash = await sha256(video);
 
   const entry: RegistryRun = {
@@ -280,7 +299,8 @@ export async function logVideo(store: Store, opts: LogOptions): Promise<Result> 
       design_board: toRel(store, opts.design) ?? toRel(store, path.join(store.campaignDir(campaign), "plan", "design.html")),
       src: isDir(srcDir) ? store.rel(srcDir) : null,
     },
-    metrics: { ...metrics, ...opts.metrics },
+    // Measured values win: a --metric must not overwrite the loudness the QA gate reads.
+    metrics: { ...opts.metrics, ...metrics },
     hashes: { mp4_sha256: hash },
     source: opts.source ?? { kind: videoIn.startsWith(campaignRuns) ? "hub" : "file", file: videoIn.startsWith(campaignRuns) ? null : videoIn },
     notes: opts.notes ?? "",
@@ -288,13 +308,16 @@ export async function logVideo(store: Store, opts: LogOptions): Promise<Result> 
 
   store.updateRegistry((reg) => {
     const clash = reg.runs.find((r) => r.run_id === runId && r.run_dir !== runRel);
-    if (clash) throw new UserError(`run_id '${runId}' sudah dipakai ${clash.project} ${clash.version}; pakai --run-id lain.`);
+    if (clash) throw new UserError(`run_id '${runId}' is already used by ${clash.project} ${clash.version}; pass another --run-id.`);
     if (stage === "production") demoteOthers(reg.runs, entry);
     reg.runs = [...reg.runs.filter((r) => r.run_id !== runId && r.run_dir !== runRel), entry];
   });
-  store.appendLog(campaign, `log ${version} · ${runId} (${stage}) · ${metrics.width}x${metrics.height} ${metrics.duration_s} s · ${metrics.integrated_lufs ?? "tanpa audio"} LUFS`);
+  store.appendLog(campaign, `log ${version} · ${runId} (${stage}) · ${metrics.width}x${metrics.height} ${metrics.duration_s} s · ${metrics.integrated_lufs != null ? `${metrics.integrated_lufs} LUFS` : "no audio"}${overridden ? ` · QA overridden: ${issues.join("; ")}` : ""}`);
   return {
-    lines: [`Run '${runId}' (${stage}) · ${runRel} · ${metrics.width}x${metrics.height} · ${metrics.duration_s} s · ${metrics.integrated_lufs ?? "—"} LUFS · TP ${metrics.true_peak_dbfs ?? "—"}`],
+    lines: [
+      `Run '${runId}' (${stage}) · ${runRel} · ${metrics.width}x${metrics.height} · ${metrics.duration_s} s · ${metrics.integrated_lufs ?? "—"} LUFS · TP ${metrics.true_peak_dbfs ?? "—"}`,
+      ...(overridden ? [`QA overridden: ${issues.join(" · ")}`] : qaWarning(issues)),
+    ],
     href: `/r/${campaign}/${version}`,
     runId,
   };
@@ -307,16 +330,31 @@ function demoteOthers(runs: RegistryRun[], target: RegistryRun) {
   }
 }
 
-export function promote(store: Store, runId: string, stage: Stage): Result {
+function qaError(what: string, issues: string[]) {
+  return new UserError(`QA failed for '${what}': ${issues.join("; ")}. Fix the mix and re-render, or override (CLI: --force; Studio: the override checkbox).`);
+}
+
+function qaWarning(issues: string[]): string[] {
+  return issues.length ? [`QA: ${issues.join(" · ")} — promotion to production is blocked until fixed (or forced).`] : [];
+}
+
+/** Production requires the measured QA rules (core/qa.ts) to pass unless `force`. */
+export function promote(store: Store, runId: string, stage: Stage, force = false): Result {
+  let issues: string[] = [];
   const target = store.updateRegistry((reg) => {
     const t = reg.runs.find((r) => r.run_id === runId || r.version === runId);
-    if (!t) throw new UserError(`Run '${runId}' tidak ditemukan.`);
-    if (stage === "production") demoteOthers(reg.runs, t);
+    if (!t) throw new UserError(`Run '${runId}' not found.`);
+    if (stage === "production") {
+      issues = qaIssues(t.metrics);
+      if (issues.length && !force) throw qaError(t.run_id, issues);
+      demoteOthers(reg.runs, t);
+    }
     t.stage = stage;
     return t;
   });
-  store.appendLog(target.project, `promote ${target.version} · ${target.run_id} → ${stage}`);
-  return { lines: [`'${target.run_id}' → ${stage}`], runId: target.run_id };
+  const note = issues.length ? ` · QA overridden: ${issues.join("; ")}` : "";
+  store.appendLog(target.project, `promote ${target.version} · ${target.run_id} → ${stage}${note}`);
+  return { lines: [`'${target.run_id}' → ${stage}`, ...(issues.length ? [`QA overridden: ${issues.join(" · ")}`] : [])], runId: target.run_id };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -328,22 +366,22 @@ export const findTracked = (store: Store, campaign: string) => store.readConfig(
 export function track(store: Store, opts: { dir: string; campaign: string; backfill?: boolean }): Result {
   const { campaign } = parseCampaign(opts.campaign);
   const dir = path.resolve(expandHome(opts.dir));
-  if (!isDir(dir)) throw new UserError(`Folder tidak ditemukan: ${dir}`);
-  if (dir === store.root || dir.startsWith(store.root + path.sep)) throw new UserError("Proyek yang dilacak harus berada di luar tracking store.");
+  if (!isDir(dir)) throw new UserError(`Folder not found: ${dir}`);
+  if (dir === store.root || dir.startsWith(store.root + path.sep)) throw new UserError("A tracked project must live outside the tracking store.");
   const engine: Engine = hf.isProject(dir) ? "hyperframes" : "mp4";
   store.ensure();
   const config = store.readConfig();
   const other = config.tracked.find((t) => t.dir === dir && t.campaign !== campaign);
-  if (other) throw new UserError(`'${dir}' sudah dilacak oleh ${other.campaign}.`);
+  if (other) throw new UserError(`'${dir}' is already tracked by ${other.campaign}.`);
   const now = new Date().toISOString();
   const entry: TrackedProject = { campaign, dir, engine, since: opts.backfill ? new Date(0).toISOString() : now, added_at: now };
   config.tracked = [...config.tracked.filter((t) => t.campaign !== campaign), entry];
   store.writeConfig(config);
-  store.appendLog(campaign, `track ${dir} · engine ${engine}${opts.backfill ? " · termasuk render lama" : ""}`);
+  store.appendLog(campaign, `track ${dir} · engine ${engine}${opts.backfill ? " · including earlier renders" : ""}`);
   return {
     lines: [
-      `Melacak ${dir} → ${campaign} (${engine}).`,
-      engine === "hyperframes" ? `Setiap render di ${path.join(dir, "renders")} jadi run baru selama \`motionmind ui\` atau \`motionmind watch\` berjalan.` : `Setiap .mp4 baru di ${dir} jadi run baru selama \`motionmind ui\` atau \`motionmind watch\` berjalan.`,
+      `Tracking ${dir} → ${campaign} (${engine}).`,
+      `Every new ${engine === "hyperframes" ? `render in ${path.join(dir, "renders")}` : `.mp4 in ${dir}`} becomes a new run (stage staging) while \`motionmind ui\` or \`motionmind watch\` runs.`,
     ],
     href: `/c/${campaign}`,
   };
@@ -351,11 +389,11 @@ export function track(store: Store, opts: { dir: string; campaign: string; backf
 
 export function untrack(store: Store, campaign: string): Result {
   const config = store.readConfig();
-  if (!config.tracked.some((t) => t.campaign === campaign)) throw new UserError(`Campaign '${campaign}' tidak melacak proyek.`);
+  if (!config.tracked.some((t) => t.campaign === campaign)) throw new UserError(`Campaign '${campaign}' tracks no project.`);
   config.tracked = config.tracked.filter((t) => t.campaign !== campaign);
   store.writeConfig(config);
-  store.appendLog(campaign, "untrack · run yang sudah tercatat tetap ada");
-  return { lines: [`Berhenti melacak ${campaign}; run yang sudah tercatat tetap ada.`] };
+  store.appendLog(campaign, "untrack · logged runs are kept");
+  return { lines: [`Stopped tracking ${campaign}; logged runs are kept.`] };
 }
 
 const VIDEO_EXT = /\.mp4$/i;
@@ -417,7 +455,7 @@ export async function scanTracked(store: Store, skip = new Set<string>()): Promi
           source: { kind: "tracked", dir: t.dir, file, file_mtime: mtime },
         }));
       } catch (err) {
-        results.push({ lines: [`Gagal mencatat ${file}: ${(err as Error).message}`] });
+        results.push({ lines: [`Could not log ${file}: ${(err as Error).message}`] });
       }
     }
   }
@@ -435,12 +473,12 @@ export function migrate(store: Store): Result {
   const staticUi = store.path("dashboard", "index.html");
   if (isFile(staticUi)) {
     fs.rmSync(staticUi);
-    lines.push("dashboard/index.html dihapus (diganti Studio: `motionmind ui`)");
+    lines.push("dashboard/index.html removed (replaced by the Studio: `motionmind ui`)");
   }
   if (isDir(store.path("dashboard")) && !fs.readdirSync(store.path("dashboard")).length) fs.rmdirSync(store.path("dashboard"));
   const hadMarker = isFile(store.path("motionmind.store.json"));
   store.ensure();
-  if (!hadMarker) lines.push("motionmind.store.json dibuat");
+  if (!hadMarker) lines.push("motionmind.store.json created");
   let tagged = 0;
   store.updateRegistry((reg) => {
     for (const r of reg.runs) {
@@ -450,8 +488,8 @@ export function migrate(store: Store): Result {
       }
     }
   });
-  if (tagged) lines.push(`${tagged} run diberi source.kind = hub`);
-  return { lines: lines.length ? [`Store ${store.root}:`, ...lines.map((l) => `  ${l}`)] : [`Store ${store.root} sudah berformat 3.0.`] };
+  if (tagged) lines.push(`${tagged} runs given source.kind = hub`);
+  return { lines: lines.length ? [`Store ${store.root}:`, ...lines.map((l) => `  ${l}`)] : [`Store ${store.root} is already in the 3.0 format.`] };
 }
 
 export const campaignsOf = (store: Store) =>

@@ -20,7 +20,7 @@ export function SafeZoneVideo({ src, portrait }: { src: string; portrait: boolea
       {portrait && (
         <div className="inline-form" style={{ justifyContent: "center", marginTop: 10 }}>
           <button className={`chip ${safe ? "on" : ""}`} onClick={() => setSafe(!safe)}>
-            {safe ? "Sembunyikan" : "Tampilkan"} zona aman 4:5 (y 285–1635)
+            {safe ? "Hide" : "Show"} 4:5 safe zone (y 285–1635)
           </button>
         </div>
       )}

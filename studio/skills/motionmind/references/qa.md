@@ -30,4 +30,5 @@ diff /tmp/a.md5 /tmp/b.md5 && echo identical
 - [ ] `breakdown.md` filled (format, audio numbers, per-scene table).
 - [ ] `PROGRESS.md` updated; feedback rules added to `TASTE.md`.
 - [ ] `motionmind log … --stage staging` done (or the run was already logged and `render` refreshed it).
-- [ ] Promote only after the user says so: `motionmind promote <run_id> --stage production`.
+- [ ] Promote only after the user says so: `motionmind promote <run_id> --stage production` (the CLI refuses it while
+  the sound numbers above fail; `--force` only when the user explicitly accepts the miss).

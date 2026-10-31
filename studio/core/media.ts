@@ -2,11 +2,18 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
+import path from "node:path";
 import { promisify } from "node:util";
 import { isFile, UserError } from "./store.ts";
 
 export const run = promisify(execFile);
 const BIG = { maxBuffer: 64 * 1024 * 1024 };
+
+/** Whether `cmd` is an executable on PATH (with PATHEXT on Windows, where npm-installed CLIs are .cmd shims). */
+export function onPath(cmd: string): boolean {
+  const exts = process.platform === "win32" ? ["", ...(process.env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD").split(";")] : [""];
+  return (process.env.PATH ?? "").split(path.delimiter).some((dir) => dir && exts.some((ext) => isFile(path.join(dir, cmd + ext))));
+}
 
 export interface MediaMetrics {
   width: number;
@@ -46,7 +53,7 @@ export async function probe(video: string): Promise<MediaMetrics> {
       "-show_entries", "format=duration,size,bit_rate", "-of", "json", video], BIG);
     json = JSON.parse(stdout);
   } catch (err) {
-    throw new UserError(`ffprobe gagal membaca '${video}': ${(err as Error).message}`);
+    throw new UserError(`ffprobe could not read '${video}': ${(err as Error).message}`);
   }
   const v = json.streams?.find((s) => s.codec_type === "video") ?? {};
   const a = json.streams?.find((s) => s.codec_type === "audio");
@@ -88,7 +95,17 @@ export async function sha256(file: string): Promise<string | null> {
   return hash.digest("hex");
 }
 
-const LABEL_FONTS = ["/System/Library/Fonts/Supplemental/Arial.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "C:/Windows/Fonts/arial.ttf"];
+// Time labels on the contact sheet; without any of these fonts the sheet is made without labels.
+const LABEL_FONTS = [
+  "/System/Library/Fonts/Supplemental/Arial.ttf",
+  "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", // Debian, Ubuntu
+  "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf", // Fedora, RHEL
+  "/usr/share/fonts/TTF/DejaVuSans.ttf", // Arch
+  "/usr/share/fonts/truetype/DejaVuSans.ttf", // openSUSE
+  "/usr/share/fonts/dejavu/DejaVuSans.ttf", // Alpine
+  "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+  "C:/Windows/Fonts/arial.ttf",
+];
 
 /** One frame per second, 10 per row, each stamped with its time. */
 export async function contactSheet(video: string, out: string, durationS: number): Promise<void> {

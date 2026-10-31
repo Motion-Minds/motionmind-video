@@ -24,14 +24,14 @@ const text = (form: FormData, key: string) => String(form.get(key) ?? "").trim()
 
 function campaignOf(form: FormData): string | UserError {
   const [brand, campaign] = ["brand", "campaign"].map((k) => text(form, k));
-  return SLUG.test(brand) && SLUG.test(campaign) ? `${brand}/${campaign}` : new UserError("Brand dan campaign: huruf kecil, angka, tanda minus (mis. demo, promo-15s).");
+  return SLUG.test(brand) && SLUG.test(campaign) ? `${brand}/${campaign}` : new UserError("Brand and campaign: lowercase letters, digits, hyphens (e.g. demo, promo-15s).");
 }
 
 function target(form: FormData): { campaign: string; version: string } | UserError {
   const campaign = campaignOf(form);
   if (campaign instanceof UserError) return campaign;
   const version = text(form, "version");
-  return VERSION.test(version) ? { campaign, version } : new UserError("Versi harus berbentuk v<N>-<slug>, mis. v1-first-cut.");
+  return VERSION.test(version) ? { campaign, version } : new UserError("Version must look like v<N>-<slug>, e.g. v1-first-cut.");
 }
 
 const fail = (err: UserError): ActionState => ({ ok: false, output: err.message });
@@ -40,7 +40,7 @@ export async function initRun(_prev: ActionState, form: FormData): Promise<Actio
   const t = target(form);
   if (t instanceof UserError) return fail(t);
   const resolution = text(form, "resolution");
-  if (!RESOLUTIONS.includes(resolution)) return { ok: false, output: `Resolusi tidak dikenal: ${resolution}` };
+  if (!RESOLUTIONS.includes(resolution)) return { ok: false, output: `Unknown resolution: ${resolution}` };
   return attempt(() => runs.initRun(store, { ...t, resolution }));
 }
 
@@ -48,7 +48,7 @@ export async function importRun(_prev: ActionState, form: FormData): Promise<Act
   const t = target(form);
   if (t instanceof UserError) return fail(t);
   const source = text(form, "source");
-  if (!path.isAbsolute(source) && !source.startsWith("~/")) return { ok: false, output: "Isi path folder proyek HyperFrames (absolut atau ~/…, mis. ~/Movies/my-video)." };
+  if (!path.isAbsolute(source) && !source.startsWith("~/")) return { ok: false, output: "Enter the HyperFrames project folder path (absolute or ~/…, e.g. ~/Movies/my-video)." };
   return attempt(() => runs.importRun(store, { source, ...t }));
 }
 
@@ -56,7 +56,7 @@ export async function trackProject(_prev: ActionState, form: FormData): Promise<
   const campaign = campaignOf(form);
   if (campaign instanceof UserError) return fail(campaign);
   const dir = text(form, "dir");
-  if (!path.isAbsolute(dir) && !dir.startsWith("~/")) return { ok: false, output: "Isi path folder proyek (absolut atau ~/…)." };
+  if (!path.isAbsolute(dir) && !dir.startsWith("~/")) return { ok: false, output: "Enter the project folder path (absolute or ~/…)." };
   return attempt(() => runs.track(store, { dir, campaign, backfill: form.get("backfill") === "on" }));
 }
 
@@ -72,7 +72,7 @@ function editTarget(form: FormData): { campaign: string; version?: string } | Us
   const t = target(form);
   if (t instanceof UserError) return t;
   const [brand, name] = t.campaign.split("/");
-  return getRun(brand, name, t.version)?.hyperframes ? t : new UserError("Run ini bukan proyek HyperFrames.");
+  return getRun(brand, name, t.version)?.hyperframes ? t : new UserError("This run is not a HyperFrames project.");
 }
 
 export async function editRun(_prev: ActionState, form: FormData): Promise<ActionState> {
@@ -92,21 +92,21 @@ export async function renderRun(_prev: ActionState, form: FormData): Promise<Act
 export async function promoteRun(_prev: ActionState, form: FormData): Promise<ActionState> {
   const runId = text(form, "run_id");
   const stage = text(form, "stage") as Stage;
-  if (!STAGES.includes(stage)) return { ok: false, output: `Stage tidak dikenal: ${stage}` };
-  if (!readRegistry().some((r) => r.run_id === runId)) return { ok: false, output: `Run '${runId}' tidak ada di registry.` };
-  return attempt(() => runs.promote(store, runId, stage));
+  if (!STAGES.includes(stage)) return { ok: false, output: `Unknown stage: ${stage}` };
+  if (!readRegistry().some((r) => r.run_id === runId)) return { ok: false, output: `Run '${runId}' is not in the registry.` };
+  return attempt(() => runs.promote(store, runId, stage, form.get("force") === "on"));
 }
 
 export async function logRun(_prev: ActionState, form: FormData): Promise<ActionState> {
   const t = target(form);
-  if (t instanceof UserError) return { ok: false, output: "Run tidak valid." };
+  if (t instanceof UserError) return { ok: false, output: "Invalid run." };
   const [brand, name] = t.campaign.split("/");
   const run = getRun(brand, name, t.version);
-  if (!run?.mp4) return { ok: false, output: "Run ini belum punya file .mp4 untuk dicatat." };
+  if (!run?.mp4) return { ok: false, output: "This run has no .mp4 file to log yet." };
   const title = text(form, "title");
   const stage = text(form, "stage") as Stage;
-  if (!title) return { ok: false, output: "Judul wajib diisi." };
-  if (!STAGES.includes(stage)) return { ok: false, output: `Stage tidak dikenal: ${stage}` };
+  if (!title) return { ok: false, output: "Title is required." };
+  if (!STAGES.includes(stage)) return { ok: false, output: `Unknown stage: ${stage}` };
   const params: Record<string, string> = {};
   for (const [key, field] of [["skill_engine", "skill"], ["concept_name", "concept"], ["hook_copy", "hook"], ["cta_copy", "cta"]] as const) {
     if (text(form, field)) params[key] = text(form, field);
@@ -123,5 +123,6 @@ export async function logRun(_prev: ActionState, form: FormData): Promise<Action
     sheet: run.sheet ?? undefined,
     breakdown: run.breakdown ?? undefined,
     design: run.design ?? undefined,
+    force: form.get("force") === "on",
   }));
 }

@@ -69,7 +69,7 @@ export function CompareView({ runs, a, b }: { runs: CompareRun[]; a: string | nu
             <div key={side}>
               <select value={run?.dir ?? ""} onChange={(e) => select(side, e.target.value)} style={{ marginBottom: 10 }}>
                 <option value="" disabled>
-                  Pilih run {side.toUpperCase()}…
+                  Select run {side.toUpperCase()}…
                 </option>
                 {runs.map((r) => (
                   <option key={r.dir} value={r.dir}>
@@ -78,7 +78,7 @@ export function CompareView({ runs, a, b }: { runs: CompareRun[]; a: string | nu
                 ))}
               </select>
               <div className="player">
-                {run ? <video ref={refs[i]} src={run.mp4Url} playsInline preload="auto" muted={i === 1} /> : <div className="empty">Belum dipilih</div>}
+                {run ? <video ref={refs[i]} src={run.mp4Url} playsInline preload="auto" muted={i === 1} /> : <div className="empty">Nothing selected</div>}
               </div>
             </div>
           );
@@ -96,7 +96,7 @@ export function CompareView({ runs, a, b }: { runs: CompareRun[]; a: string | nu
             </span>
           </div>
           <p className="muted small" style={{ marginBottom: 14 }}>
-            Audio dari run A; run B dibisukan. Video A menjadi jam acuan.
+            Audio from run A; run B is muted. Video A is the reference clock.
           </p>
           <table className="diff-table panel">
             <tbody>

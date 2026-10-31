@@ -99,7 +99,7 @@ function buildRun(brand: string, campaign: string, version: string, registry: Re
     campaign,
     version,
     dir,
-    kind: mp4 ? "video" : images.length ? "gambar" : "empty",
+    kind: mp4 ? "video" : images.length ? "image" : "empty",
     mp4,
     sheet: existing(reg?.artifacts.contact_sheet) ?? top("contact-sheet.png") ?? firstMatching(sheetRe),
     breakdown: top("breakdown.md") ?? existing(reg?.artifacts.breakdown),

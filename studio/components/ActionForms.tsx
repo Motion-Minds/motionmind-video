@@ -1,10 +1,11 @@
 "use client";
 import Link from "next/link";
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { editRun, importRun, initRun, logRun, promoteRun, renderRun, trackProject, untrackProject, type ActionState } from "@/app/actions";
+import { QA_LUFS, QA_LUFS_TOLERANCE, QA_TRUE_PEAK_MAX } from "@/core/qa";
 import type { EditLock, Stage } from "@/lib/hub";
 
-function Result({ state, linkLabel = "Buka run baru →" }: { state: ActionState; linkLabel?: string | null }) {
+function Result({ state, linkLabel = "Open new run →" }: { state: ActionState; linkLabel?: string | null }) {
   if (!state) return null;
   return (
     <div className={`result ${state.ok ? "ok" : "err"}`}>
@@ -34,7 +35,7 @@ function RunFields(props: { brands: string[]; campaigns: string[]; brand: string
           <input name="campaign" list={`campaigns-${props.idSuffix}`} defaultValue={props.campaign} placeholder="ai-agent-reel-15s" required />
         </label>
         <label className="field">
-          Versi
+          Version
           <input name="version" defaultValue={props.version} placeholder="v1-first-cut" required pattern="v[0-9]+(-[a-z0-9][a-z0-9-]*)?" />
         </label>
       </div>
@@ -67,15 +68,15 @@ export function EditForm(props: { brand: string; campaign: string; version: stri
         {props.editing ? (
           <>
             <a className="btn primary" href={props.editing.url} target="_blank" rel="noreferrer">
-              Buka HyperFrames Studio ↗
+              Open HyperFrames Studio ↗
             </a>
             <button className="btn" name="op" value="stop" disabled={pending}>
-              {pending ? "Menutup…" : "Selesai edit"}
+              {pending ? "Closing…" : "Done editing"}
             </button>
           </>
         ) : (
           <button className="btn primary" name="op" value="start" disabled={pending}>
-            {pending ? "Membuka…" : "Edit di HyperFrames"}
+            {pending ? "Opening…" : "Edit in HyperFrames"}
           </button>
         )}
       </div>
@@ -92,7 +93,7 @@ export function RenderForm(props: { brand: string; campaign: string; version: st
       <RunTarget {...props} />
       <div>
         <button className="btn" disabled={pending}>
-          {pending ? "Merender… (±30 s per 30 s video)" : props.version ? "Render video.mp4 + contact sheet" : "Render & catat sebagai run baru"}
+          {pending ? "Rendering… (±30 s per 30 s of video)" : props.version ? "Render video.mp4 + contact sheet" : "Render & log as a new run"}
         </button>
       </div>
       <Result state={state} />
@@ -105,13 +106,13 @@ export function ImportForm(props: { brands: string[]; campaigns: string[] }) {
   return (
     <form action={action} className="form">
       <label className="field">
-        Folder proyek HyperFrames (berisi index.html)
+        HyperFrames project folder (contains index.html)
         <input name="source" placeholder="~/Movies/HyperFrames/my-video" required />
       </label>
       <RunFields {...props} brand="" campaign="" version="v1-" idSuffix="import" />
       <div>
         <button className="btn primary" disabled={pending}>
-          {pending ? "Mengimpor…" : "Import ke run baru (motionmind import)"}
+          {pending ? "Importing…" : "Import into a new run (motionmind import)"}
         </button>
       </div>
       <Result state={state} />
@@ -125,7 +126,7 @@ export function TrackForm(props: { brands: string[]; campaigns: string[]; brand?
   return (
     <form action={action} className="form">
       <label className="field">
-        Folder proyek (proyek HyperFrames, atau folder export .mp4 dari editor lain)
+        Project folder (a HyperFrames project, or an .mp4 export folder from another editor)
         <input name="dir" placeholder="~/Movies/HyperFrames/my-video" required />
       </label>
       <div className="form-row">
@@ -143,16 +144,16 @@ export function TrackForm(props: { brands: string[]; campaigns: string[]; brand?
       <label className="skill-opt" style={{ maxWidth: 520 }}>
         <input type="checkbox" name="backfill" />
         <span>
-          <b>Catat juga render lama</b>
-          Tanpa ini, hanya render setelah sekarang yang masuk.
+          <b>Also log existing renders</b>
+          Without this, only renders made from now on are logged.
         </span>
       </label>
       <div>
         <button className="btn primary" disabled={pending}>
-          {pending ? "Menyimpan…" : "Lacak proyek (motionmind track)"}
+          {pending ? "Saving…" : "Track project (motionmind track)"}
         </button>
       </div>
-      <Result state={state} linkLabel="Buka campaign →" />
+      <Result state={state} linkLabel="Open campaign →" />
     </form>
   );
 }
@@ -165,7 +166,7 @@ export function UntrackForm({ brand, campaign }: { brand: string; campaign: stri
       <input type="hidden" name="campaign" value={campaign} />
       <div>
         <button className="btn" disabled={pending}>
-          {pending ? "Menyimpan…" : "Berhenti melacak"}
+          {pending ? "Saving…" : "Stop tracking"}
         </button>
       </div>
       <Result state={state} linkLabel={null} />
@@ -173,7 +174,19 @@ export function UntrackForm({ brand, campaign }: { brand: string; campaign: stri
   );
 }
 
-export function PromoteForm({ runId, stage }: { runId: string; stage: Stage }) {
+function ForceQa({ label }: { label: string }) {
+  return (
+    <label className="skill-opt" style={{ maxWidth: 520 }}>
+      <input type="checkbox" name="force" />
+      <span>
+        <b>{label}</b>
+        Production requires {QA_LUFS} ±{QA_LUFS_TOLERANCE} LUFS and true peak ≤ {QA_TRUE_PEAK_MAX} dBFS.
+      </span>
+    </label>
+  );
+}
+
+export function PromoteForm({ runId, stage, qaIssues }: { runId: string; stage: Stage; qaIssues: string[] }) {
   const [state, action, pending] = useActionState(promoteRun, null);
   return (
     <form action={action} className="form">
@@ -185,9 +198,21 @@ export function PromoteForm({ runId, stage }: { runId: string; stage: Stage }) {
           <option value="archived">archived</option>
         </select>
         <button className="btn" disabled={pending}>
-          {pending ? "Menyimpan…" : "Ubah stage"}
+          {pending ? "Saving…" : "Change stage"}
         </button>
       </div>
+      {qaIssues.length > 0 && (
+        <>
+          <div className="run-meta">
+            {qaIssues.map((issue) => (
+              <span key={issue} className="pill stage-staging">
+                {issue}
+              </span>
+            ))}
+          </div>
+          <ForceQa label="Promote to production despite QA issues" />
+        </>
+      )}
       <Result state={state} />
     </form>
   );
@@ -195,6 +220,7 @@ export function PromoteForm({ runId, stage }: { runId: string; stage: Stage }) {
 
 export function LogForm(props: { brand: string; campaign: string; version: string; defaultTitle: string; defaultSkill: string }) {
   const [state, action, pending] = useActionState(logRun, null);
+  const [stage, setStage] = useState("staging");
   return (
     <form action={action} className="form">
       {(["brand", "campaign", "version"] as const).map((k) => (
@@ -202,12 +228,12 @@ export function LogForm(props: { brand: string; campaign: string; version: strin
       ))}
       <div className="form-row">
         <label className="field">
-          Judul
+          Title
           <input name="title" defaultValue={props.defaultTitle} required />
         </label>
         <label className="field">
           Stage
-          <select name="stage" defaultValue="staging">
+          <select name="stage" value={stage} onChange={(e) => setStage(e.target.value)}>
             <option value="staging">staging</option>
             <option value="production">production</option>
             <option value="archived">archived</option>
@@ -220,11 +246,11 @@ export function LogForm(props: { brand: string; campaign: string; version: strin
       </div>
       <div className="form-row">
         <label className="field">
-          Konsep
+          Concept
           <input name="concept" />
         </label>
         <label className="field">
-          Hook (0–3 dtk)
+          Hook (0–3 s)
           <input name="hook" />
         </label>
         <label className="field">
@@ -233,12 +259,13 @@ export function LogForm(props: { brand: string; campaign: string; version: strin
         </label>
       </div>
       <label className="field">
-        Catatan
+        Notes
         <input name="notes" />
       </label>
+      {stage === "production" && <ForceQa label="Log as production even if QA fails" />}
       <div>
         <button className="btn primary" disabled={pending}>
-          {pending ? "Mengukur & mencatat…" : "Catat ke registry (motionmind log)"}
+          {pending ? "Measuring & logging…" : "Log to registry (motionmind log)"}
         </button>
       </div>
       <Result state={state} />
@@ -259,10 +286,10 @@ export function InitForm(props: { brands: string[]; campaigns: string[]; brand: 
           <option value="square">Square 1:1 (1080×1080)</option>
         </select>
       </label>
-      <p className="muted small">Proyek HyperFrames (HTML + GSAP), bisa diedit visual di HyperFrames Studio. Logo &amp; font brand disalin ke src/assets/brand/.</p>
+      <p className="muted small">A HyperFrames project (HTML + GSAP), visually editable in HyperFrames Studio. Brand logo &amp; fonts are copied to src/assets/brand/.</p>
       <div>
         <button className="btn primary" disabled={pending}>
-          {pending ? "Membuat…" : "Buat run (motionmind init)"}
+          {pending ? "Creating…" : "Create run (motionmind init)"}
         </button>
       </div>
       <Result state={state} />

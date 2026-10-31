@@ -45,7 +45,7 @@ MotionMind gives the agent a **production process** and gives you a **record of 
 |---|---|---|
 | 🧠 | **`motionmind` skill** | Four-gate workflow, HyperFrames rules, motion and sound guidance, QA checklist, screen-demo kit. Works with any agent that reads `SKILL.md`. |
 | ⌨️ | **`motionmind` CLI** | `setup`, `init`, `render`, `log`, `promote`, `track`, `compare`, `music`, `sfx`, `doctor`. The agent calls it; you can too. |
-| 🖥️ | **Studio** (`motionmind ui`) | Dashboard at `127.0.0.1:4310`: every version with player, 4:5 safe-area overlay, contact sheet, LUFS, parameters, stages, compare, docs. |
+| 🖥️ | **Studio** (`motionmind ui`) | Dashboard at `127.0.0.1:4310`: every version with player, 4:5 safe-area overlay, contact sheet, LUFS and QA status, parameters, stages, compare, docs. |
 | 🎵 | **Music bed** | `motionmind music`: deterministic, sample-free 120 BPM beds with sections (tense, calm, groove, lift, outro), bells and ducking. |
 | 🔊 | **Starter SFX** | 22 CC0 sounds (clicks, pops, chimes, whooshes, risers, impacts) built in; plug in your own library any time. |
 | 📡 | **Tracking** | Already working in HyperFrames Studio or another editor? `motionmind track` logs every render or export as a version. |
@@ -70,8 +70,9 @@ rendered at −13.7 LUFS.</sub>
 
 ## Quick start
 
-Requirements: Node.js 22+, `ffmpeg`/`ffprobe` on `PATH`, and an AI coding agent CLI. HyperFrames and its headless
-Chrome are fetched on first use.
+Requirements: macOS, Linux or Windows; Node.js 22+; `ffmpeg`/`ffprobe` on `PATH`; and an AI coding agent CLI.
+HyperFrames and its headless Chrome are fetched on first use (Linux ARM64 needs a system Chromium, see
+[Requirements](#requirements)).
 
 ```bash
 npm i -g motionmind
@@ -115,10 +116,12 @@ flowchart LR
    easing, music) so later versions look and move the same.
 4. **Let it build.** `motionmind init` creates the version folder; the agent writes one scene per file, runs
    HyperFrames `check` and `snapshot` after every change, and looks at the frames.
-5. **Review.** Watch the draft in the Studio, or press **Edit di HyperFrames** to change text, timing or audio without
+5. **Review.** Watch the draft in the Studio, or press **Edit in HyperFrames** to change text, timing or audio without
    code. While you edit, the version is locked for the agent.
-6. **Promote.** After QA (−14 LUFS, true peak ≤ −1 dBFS, 9:16 safe area, CTA held), you move it to production; the
-   previous production version of the same aspect ratio is archived, never deleted.
+6. **Promote.** After QA (−14 LUFS ±0.5, true peak ≤ −1 dBFS, 9:16 safe area, CTA held), you move it to production;
+   the previous production version of the same aspect ratio is archived, never deleted. The loudness rules are
+   enforced: a version that misses them is refused for production unless you override it (`--force`, or the checkbox
+   in the Studio), and the override is written to `LOG.md`.
 
 > **Tip:** a new message or audience is a new **campaign**; a new hook, style, music or ratio for the same message is a
 > new **version** (`v2-…`) in the same campaign. Rendered versions are never overwritten.
@@ -174,7 +177,7 @@ Revise acme/launch-15s v2: the CTA is too small and the second scene is rushed. 
 | run · params · metrics · artifacts | version `v<N>-<slug>` · composition, variables, CLI version · LUFS, true peak, duration, render time · `video.mp4`, contact sheet, `src/` snapshot |
 | `mlflow.autolog()` | `motionmind track` + `motionmind ui` / `watch`: every render in a tracked project is logged |
 | `mlflow.log_*` | `motionmind log <video> --param k=v --metric k=n` |
-| model registry stages | `staging` → `production` → `archived`, one production version per aspect ratio |
+| model registry stages | `staging` (default) → `production` → `archived`, one production version per aspect ratio; production requires passing QA |
 | `mlflow ui` | `motionmind ui` |
 
 ### Already working in HyperFrames Studio or another editor?
@@ -204,6 +207,9 @@ copies the skill to `.agents/skills/motionmind` with a link at `.claude/skills/m
 home directory; skip with `--no-hyperframes-skill`). Update the motionmind skill later with `motionmind skill install`
 (add `--global` to install it into `~/.agents` and `~/.claude` instead).
 
+The package carries the Studio's Next.js + React runtime (about 330 MB installed, most of it Next.js and its native
+compiler), so the first install takes a few minutes on a slow connection.
+
 ### From source
 
 ```bash
@@ -231,7 +237,7 @@ needs the `motionmind` CLI on `PATH` for its commands.
 |---|---|
 | Run the CLI and Studio | Node.js 22+ |
 | Render, measure loudness, make contact sheets | `ffmpeg` + `ffprobe` on `PATH` |
-| Render HyperFrames | nothing extra — `npx` fetches the pinned HyperFrames CLI and its headless Chrome |
+| Render HyperFrames | nothing extra on macOS, Windows and desktop Linux x64 — `npx` fetches the pinned HyperFrames CLI and its headless Chrome. Minimal Linux (servers, Docker) also needs Chrome's system libraries; HyperFrames prints the exact `apt-get install` line, and Docker needs `--shm-size=1g`. **Linux ARM64** has no headless Chrome build: install Chromium (`apt install chromium`) and `export HYPERFRAMES_BROWSER_PATH=$(command -v chromium)`. |
 | Make videos with an agent | an agent CLI that reads skills: Claude Code, Codex, Gemini CLI, OpenCode, … |
 | Your own sound library | optional — a folder with one sub-folder per category, `MOTIONMIND_SFX=<folder>` |
 | Nicer Studio fonts | optional — Satoshi and Geist files in `shared/ui-fonts/` (system fonts otherwise) |
@@ -248,10 +254,10 @@ needs the `motionmind` CLI on `PATH` for its commands.
 | `motionmind import <dir> b/c v1-slug` | copy an existing HyperFrames project into a new version |
 | `motionmind edit b/c [version] [--stop]` | open HyperFrames Studio on a version (or the tracked project); locks it for agents |
 | `motionmind render b/c [version]` | render with the pinned CLI, make the contact sheet, measure, update the record |
-| `motionmind log <video> --campaign b/c [--param k=v] [--metric k=n] [--stage]` | record any video as a version |
+| `motionmind log <video> --campaign b/c [--param k=v] [--metric k=n] [--stage staging\|production\|archived] [--force]` | record any video as a version; stage defaults to `staging` |
 | `motionmind track <dir> --campaign b/c [--backfill]` · `untrack` · `tracked` · `watch [--once]` | autolog renders of a project you edit elsewhere |
-| `motionmind promote <run_id> --stage production\|staging\|archived` · `list` · `compare <a> <b>` | registry operations |
-| `motionmind music --out x.wav --duration 15 --sections 0:tense,2:groove,5:outro` | deterministic music bed |
+| `motionmind promote <run_id> --stage production\|staging\|archived [--force]` · `list` · `compare <a> <b>` | registry operations; production requires passing QA |
+| `motionmind music --out x.wav --duration 15 --sections "0:tense,2:groove,5:outro"` | deterministic music bed; section numbers are bars (0-based), not seconds |
 | `motionmind sfx list [--query]` · `sfx scan` | SFX catalogue (built-in CC0 pack, or your library) |
 
 ## How the skill keeps quality up
@@ -263,7 +269,9 @@ needs the `motionmind` CLI on `PATH` for its commands.
   contact sheet before saying "done".
 - **Style memory** — palette with colour roles, type, easing and music live in `TASTE.md`; feedback becomes rules there.
 - **Determinism** — no randomness or clocks in scenes; the same render twice gives identical frames.
-- **Sound that's measured** — −14 LUFS integrated, true peak ≤ −1 dBFS, read from the rendered file every time.
+- **Sound that's measured** — −14 LUFS ±0.5 integrated, true peak ≤ −1 dBFS, read from the rendered file every time.
+  `log` and `render` warn when a video misses it, and promotion to production is refused (override: `--force`, which
+  is written to `LOG.md`). Silent videos pass.
 - **Phone-safe layout** — 9:16 text and CTA inside y 285–1635, body text ≥ 28 px, CTA held still at the end.
 - **Edit lock** — while you edit in HyperFrames Studio, the agent does not touch the project; afterwards it reads
   your changes first.
@@ -307,8 +315,17 @@ Yes, an H.264 `video.mp4` per version, next to its contact sheet and the HyperFr
 <details>
 <summary><b>Can I change a video without code?</b></summary>
 
-Yes. Press **Edit di HyperFrames** on a version (or run `motionmind edit`) to open HyperFrames Studio: timeline, text
+Yes. Press **Edit in HyperFrames** on a version (or run `motionmind edit`) to open HyperFrames Studio: timeline, text
 variables, audio clips. Then render again from the Studio.
+</details>
+
+<details>
+<summary><b>Does it run on Windows and Linux?</b></summary>
+
+Yes: macOS, Windows and Linux (x64 and ARM64). On Linux ARM64 there is no headless Chrome build, so install Chromium
+and set `HYPERFRAMES_BROWSER_PATH`; minimal Linux images also need Chrome's system libraries (HyperFrames prints the
+`apt-get` line). In PowerShell, quote comma lists: `--sections "0:tense,2:groove"`. `motionmind doctor` checks the
+rest.
 </details>
 
 <details>

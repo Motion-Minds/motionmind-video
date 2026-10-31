@@ -12,19 +12,19 @@ export interface StarterCampaign {
 type FieldDef = { label: string; kind: "text" | "area" | "select" | "number"; placeholder?: string; options?: string[]; initial?: string };
 
 const FIELDS: Record<string, FieldDef> = {
-  goal: { label: "Tujuan / pesan utama", kind: "area", placeholder: "Pemilik toko tahu stok menipis sebelum habis" },
-  audience: { label: "Audiens", kind: "text", placeholder: "Pemilik warung & kafe kecil" },
-  cta: { label: "CTA", kind: "text", placeholder: "contoh.com" },
+  goal: { label: "Goal / key message", kind: "area", placeholder: "Shop owners know stock is running low before it runs out" },
+  audience: { label: "Audience", kind: "text", placeholder: "Owners of small shops & cafés" },
+  cta: { label: "CTA", kind: "text", placeholder: "example.com" },
   format: { label: "Format", kind: "select", options: ["9:16 (1080×1920, Reels/TikTok)", "16:9 (1920×1080)", "1:1 (1080×1080)", "4:5 (1080×1350, feed)"] },
-  duration: { label: "Durasi (detik)", kind: "number", initial: "30" },
-  audio: { label: "Audio", kind: "select", options: ["musik + SFX, tanpa VO", "VO (MP3 menyusul) + musik + SFX", "VO guide TTS sementara + musik + SFX", "tanpa audio"] },
-  content: { label: "Isi / halaman yang wajib tampil", kind: "area", placeholder: "Halaman stok, kartu stok rendah, notifikasi… (atau: pilihkan dari captures)" },
-  refs: { label: "Referensi", kind: "text", placeholder: "~/Downloads/ref.mp4 detik 0–3 (tiru teknik, bukan aset)" },
-  style: { label: "Gaya", kind: "text", placeholder: "ikut TASTE.md campaign <nama> · atau baru" },
-  change: { label: "Yang diubah", kind: "area", placeholder: "Hook baru: mulai dari nota hilang; musik lebih kalem" },
-  notes: { label: "Catatan review", kind: "area", placeholder: "- detik 8: tap terlalu cepat\n- end card: URL kurang besar" },
-  slides: { label: "Jumlah slide", kind: "number", initial: "4" },
-  extra: { label: "Perintah tambahan", kind: "area", placeholder: "Apa pun yang khusus untuk tugas ini" },
+  duration: { label: "Duration (seconds)", kind: "number", initial: "30" },
+  audio: { label: "Audio", kind: "select", options: ["music + SFX, no VO", "VO (MP3 to follow) + music + SFX", "temporary TTS guide VO + music + SFX", "no audio"] },
+  content: { label: "Content / screens that must appear", kind: "area", placeholder: "Stock page, low-stock card, notification… (or: pick from captures)" },
+  refs: { label: "References", kind: "text", placeholder: "~/Downloads/ref.mp4 seconds 0–3 (copy the technique, not the assets)" },
+  style: { label: "Style", kind: "text", placeholder: "follow campaign <name> TASTE.md · or new" },
+  change: { label: "What changes", kind: "area", placeholder: "New hook: open on a lost receipt; calmer music" },
+  notes: { label: "Review notes", kind: "area", placeholder: "- 8 s: tap is too fast\n- end card: URL too small" },
+  slides: { label: "Number of slides", kind: "number", initial: "4" },
+  extra: { label: "Extra instructions", kind: "area", placeholder: "Anything specific to this task" },
 };
 
 /** Replace {{field}}; drop a line whose placeholders all came out empty, so unused fields leave no stub. */
@@ -62,7 +62,7 @@ export function StarterKitBuilder({ kits, brands, campaigns }: { kits: StarterKi
     [kit, values, version, current],
   );
 
-  if (!kit) return <div className="empty">Belum ada starter kit di starter-kits/.</div>;
+  if (!kit) return <div className="empty">No starter kits in starter-kits/ yet.</div>;
 
   return (
     <div className="grid two">
@@ -80,29 +80,29 @@ export function StarterKitBuilder({ kits, brands, campaigns }: { kits: StarterKi
           <label className="field">
             Brand
             <select value={brand} onChange={(e) => (set("brand", e.target.value), set("campaign", ""), set("run", ""), set("version", ""))}>
-              <option value="">— pilih —</option>
+              <option value="">— select —</option>
               {brands.map((b) => (
                 <option key={b}>{b}</option>
               ))}
             </select>
           </label>
           <label className="field">
-            Campaign {existingOnly ? "(yang sudah ada)" : "(baru: huruf kecil-minus)"}
+            Campaign {existingOnly ? "(existing)" : "(new: lowercase-with-hyphens)"}
             {existingOnly ? (
               <select value={values.campaign ?? ""} onChange={(e) => (set("campaign", e.target.value), set("run", ""), set("version", ""))}>
-                <option value="">— pilih —</option>
+                <option value="">— select —</option>
                 {brandCampaigns.map((c) => (
                   <option key={c.campaign}>{c.campaign}</option>
                 ))}
               </select>
             ) : (
-              <input value={values.campaign ?? ""} onChange={(e) => set("campaign", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))} placeholder="stok-aman-30s" />
+              <input value={values.campaign ?? ""} onChange={(e) => set("campaign", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))} placeholder="safe-stock-30s" />
             )}
           </label>
           {kit.fields.includes("version") && (
             <label className="field">
-              Versi baru
-              <input value={version} onChange={(e) => set("version", e.target.value)} placeholder="v4-hook-baru" />
+              New version
+              <input value={version} onChange={(e) => set("version", e.target.value)} placeholder="v4-new-hook" />
             </label>
           )}
           {kit.fields.includes("run") && (
@@ -118,7 +118,7 @@ export function StarterKitBuilder({ kits, brands, campaigns }: { kits: StarterKi
         </div>
         {!existingOnly && brandCampaigns.some((c) => c.campaign === values.campaign) && (
           <p className="small" style={{ color: "var(--amber)" }}>
-            Campaign ini sudah ada. Untuk eksekusi baru dari pesan yang sama, pakai kit &ldquo;Versi baru&rdquo;.
+            This campaign already exists. For a new execution of the same message, use the &ldquo;New version&rdquo; kit.
           </p>
         )}
 
@@ -154,13 +154,13 @@ export function StarterKitBuilder({ kits, brands, campaigns }: { kits: StarterKi
             disabled={!brand || !values.campaign}
             onClick={() => navigator.clipboard.writeText(prompt).then(() => setCopied(true))}
           >
-            {copied ? "Tersalin ✓" : "Salin prompt"}
+            {copied ? "Copied ✓" : "Copy prompt"}
           </button>
         </div>
         <pre className="log" style={{ minHeight: 360 }}>{prompt}</pre>
         <p className="muted small" style={{ marginTop: 10 }}>
-          Tempel di Claude Code / omp / Codex yang dibuka di folder MotionMind. Template ada di <code>starter-kits/{kit.id}.md</code>; ubah atau
-          tambah file .md di sana untuk kit baru.
+          Paste into Claude Code / omp / Codex opened in the MotionMind folder. The template lives in <code>starter-kits/{kit.id}.md</code>; edit it or
+          add .md files there for new kits.
         </p>
       </section>
     </div>

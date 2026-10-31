@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import * as hf from "./hyperframes.ts";
-import { run } from "./media.ts";
+import { onPath, run } from "./media.ts";
 import { isDir, isFile, packageDir, Store, UserError, STORE_MARKER } from "./store.ts";
 
 const SKILL = "motionmind";
@@ -20,10 +20,10 @@ function packageVersion(): string {
 /** Copy the bundled skill to `<root>/.agents/skills/motionmind` and link `<root>/.claude/skills/motionmind` to it. */
 export function installSkill(root: string, force = false): string[] {
   const src = skillSource();
-  if (!isFile(path.join(src, "SKILL.md"))) throw new UserError(`Skill bawaan tidak ditemukan di ${src}.`);
+  if (!isFile(path.join(src, "SKILL.md"))) throw new UserError(`Bundled skill not found in ${src}.`);
   const dest = path.join(root, ".agents", "skills", SKILL);
   if (isDir(dest) && !isFile(path.join(dest, STAMP)) && !force) {
-    throw new UserError(`${dest} sudah ada dan bukan hasil pemasangan MotionMind; pakai --force untuk menimpanya.`);
+    throw new UserError(`${dest} already exists and was not installed by MotionMind; pass --force to replace it.`);
   }
   fs.rmSync(dest, { recursive: true, force: true });
   fs.mkdirSync(path.dirname(dest), { recursive: true });
@@ -34,11 +34,13 @@ export function installSkill(root: string, force = false): string[] {
   fs.mkdirSync(path.dirname(claude), { recursive: true });
   const existing = fs.lstatSync(claude, { throwIfNoEntry: false });
   if (existing && !existing.isSymbolicLink() && !isFile(path.join(claude, STAMP)) && !force) {
-    throw new UserError(`${claude} sudah ada dan bukan hasil pemasangan MotionMind; pakai --force untuk menimpanya.`);
+    throw new UserError(`${claude} already exists and was not installed by MotionMind; pass --force to replace it.`);
   }
   if (existing) fs.rmSync(claude, { recursive: true, force: true });
-  fs.symlinkSync(path.relative(path.dirname(claude), dest), claude, "dir");
-  return [`skill ${SKILL} ${packageVersion()} → ${dest}`, `${claude} → ${path.relative(path.dirname(claude), dest)}`];
+  // Windows: directory symlinks need admin rights or Developer Mode; a junction (absolute target) needs neither.
+  const target = process.platform === "win32" ? dest : path.relative(path.dirname(claude), dest);
+  fs.symlinkSync(target, claude, process.platform === "win32" ? "junction" : "dir");
+  return [`skill ${SKILL} ${packageVersion()} → ${dest}`, `${claude} → ${target}`];
 }
 
 const AGENTS_MD = `# MotionMind workspace
@@ -70,17 +72,17 @@ export interface SetupOptions {
 
 export async function setupWorkspace(opts: SetupOptions): Promise<string[]> {
   const root = path.resolve(opts.dir);
-  const lines = [`Workspace MotionMind: ${root}`];
+  const lines = [`MotionMind workspace: ${root}`];
   const store = new Store(root);
   const fresh = !isFile(store.path(STORE_MARKER));
   store.ensure();
   fs.mkdirSync(store.path("shared", "brands"), { recursive: true });
-  lines.push(fresh ? `  + ${STORE_MARKER}, projects/, shared/brands/` : `  = ${STORE_MARKER} sudah ada (store dipakai apa adanya)`);
+  lines.push(fresh ? `  + ${STORE_MARKER}, projects/, shared/brands/` : `  = ${STORE_MARKER} already exists (store used as is)`);
 
   for (const [name, text] of [["AGENTS.md", AGENTS_MD], ["CLAUDE.md", AGENTS_MD], [".gitignore", GITIGNORE]] as const) {
     const file = path.join(root, name);
     if (isFile(file) && !opts.force) {
-      lines.push(`  = ${name} sudah ada (tidak diubah; --force untuk menimpa)`);
+      lines.push(`  = ${name} already exists (unchanged; --force to overwrite)`);
       continue;
     }
     fs.writeFileSync(file, text);
@@ -92,20 +94,20 @@ export async function setupWorkspace(opts: SetupOptions): Promise<string[]> {
     // hf.env() sets HYPERFRAMES_SKIP_SKILLS for every other command; this one exists to install them.
     const env: NodeJS.ProcessEnv = { ...hf.env() };
     delete env.HYPERFRAMES_SKIP_SKILLS;
-    const res = await run("npx", ["-y", `hyperframes@${hf.HF_VERSION}`, "skills"], { cwd: root, env, timeout: 300_000 }).then(
+    const res = await hf.runNpx(["-y", `hyperframes@${hf.HF_VERSION}`, "skills"], { cwd: root, env, timeout: 300_000 }).then(
       (r) => ({ ok: true, output: `${r.stdout}${r.stderr}` }),
       (e) => ({ ok: false, output: `${e.stdout ?? ""}${e.stderr ?? ""}` || String(e.message) }),
     );
     const tail = res.output.trim().split("\n").slice(-3).map((l) => `      ${l.trim()}`).join("\n");
-    lines.push(res.ok ? `  + skill resmi HyperFrames (npx hyperframes skills):\n${tail}` : `  ! npx hyperframes skills gagal:\n${res.output.slice(-1500)}`);
+    lines.push(res.ok ? `  + official HyperFrames skills (npx hyperframes skills):\n${tail}` : `  ! npx hyperframes skills failed:\n${res.output.slice(-1500)}`);
   }
   lines.push(
     "",
-    "Berikutnya:",
+    "Next:",
     `  cd ${path.relative(process.cwd(), root) || "."}`,
-    "  motionmind doctor            # cek ffmpeg, Chrome, HyperFrames",
-    "  motionmind ui                # Studio di http://127.0.0.1:4310 (biarkan berjalan)",
-    "  claude   (atau codex, dll.)  # lalu: \"Pakai skill motionmind. Aku mau video promo 15 detik untuk …\"",
+    "  motionmind doctor            # check ffmpeg, Chrome, HyperFrames",
+    "  motionmind ui                # Studio at http://127.0.0.1:4310 (keep it running)",
+    "  claude   (or codex, etc.)    # then: \"Use the motionmind skill. I want a 15-second promo video for …\"",
   );
   return lines;
 }
@@ -117,14 +119,17 @@ interface Check {
   required: boolean;
 }
 
-async function which(cmd: string, args: string[]): Promise<string | null> {
+/** First output line of a version command, or null when it cannot run. */
+async function firstLine(res: Promise<{ stdout: string | Buffer; stderr: string | Buffer }>): Promise<string | null> {
   try {
-    const { stdout, stderr } = await run(cmd, args, { timeout: 120_000, env: hf.env() });
+    const { stdout, stderr } = await res;
     return `${stdout}${stderr}`.trim().split("\n")[0] ?? "";
   } catch {
     return null;
   }
 }
+
+const VERSION_CHECK = { timeout: 120_000, env: hf.env() };
 
 export async function doctor(cwd = process.cwd()): Promise<{ lines: string[]; ok: boolean }> {
   const store = new Store();
@@ -132,29 +137,34 @@ export async function doctor(cwd = process.cwd()): Promise<{ lines: string[]; ok
   const nodeMajor = Number(process.versions.node.split(".")[0]);
   checks.push({ name: "Node.js ≥ 22", ok: nodeMajor >= 22, detail: process.version, required: true });
   for (const bin of ["ffmpeg", "ffprobe"]) {
-    const v = await which(bin, ["-version"]);
-    checks.push({ name: bin, ok: v !== null, detail: v ?? "tidak ditemukan di PATH (brew install ffmpeg / apt install ffmpeg)", required: true });
+    const v = await firstLine(run(bin, ["-version"], VERSION_CHECK));
+    checks.push({ name: bin, ok: v !== null, detail: v ?? "not found on PATH (brew install ffmpeg / apt install ffmpeg / winget install ffmpeg)", required: true });
   }
-  const hfVersion = await which("npx", ["-y", `hyperframes@${hf.HF_VERSION}`, "--version"]);
-  checks.push({ name: `HyperFrames ${hf.HF_VERSION}`, ok: hfVersion !== null, detail: hfVersion ?? "npx gagal mengambil hyperframes (cek koneksi/npm)", required: true });
+  const hfVersion = await firstLine(hf.runNpx(["-y", `hyperframes@${hf.HF_VERSION}`, "--version"], VERSION_CHECK));
+  checks.push({ name: `HyperFrames ${hf.HF_VERSION}`, ok: hfVersion !== null, detail: hfVersion ?? "npx could not fetch hyperframes (check network/npm)", required: true });
   if (hfVersion !== null) {
-    // HyperFrames' own doctor also lists optional extras (local TTS/music models, Docker); only the render path matters here.
+    // HyperFrames' own doctor also lists optional extras (local TTS/music models, Docker) and a newer-version notice
+    // (the pin is deliberate); only the render path matters here.
     const res = await hf.npx(cwd, ["doctor"], 180_000);
-    const failing = res.output.split("\n").filter((l) => /✗/.test(l) && !/optional|Docker/i.test(l)).map((l) => l.replace(/\s+/g, " ").trim());
+    const failing = res.output.split("\n").filter((l) => /✗/.test(l) && !/optional|Docker|✗\s*Version\b.*available/i.test(l)).map((l) => l.replace(/\s+/g, " ").trim());
     const chrome = /✓ Chrome/.test(res.output);
-    checks.push({ name: "Render (Chrome, ffmpeg via HyperFrames)", ok: chrome && !failing.length, detail: failing.join(" · ") || (chrome ? "ok" : "Chrome belum terpasang → npx hyperframes browser"), required: true });
+    // Chrome Headless Shell has no Linux ARM64 build; HyperFrames then needs a system Chromium.
+    const noChrome = process.platform === "linux" && process.arch === "arm64"
+      ? "Chrome not found → Linux ARM64: install Chromium (apt install chromium) and export HYPERFRAMES_BROWSER_PATH=$(command -v chromium)"
+      : "Chrome not installed → npx hyperframes browser";
+    checks.push({ name: "Render (Chrome, ffmpeg via HyperFrames)", ok: chrome && !failing.length, detail: [...failing, ...(chrome ? [] : [noChrome])].join(" · ") || "ok", required: true });
   }
   checks.push({
     name: "Workspace",
     ok: isFile(store.path(STORE_MARKER)),
-    detail: isFile(store.path(STORE_MARKER)) ? store.root : `belum ada ${STORE_MARKER} di sini atau di atasnya → motionmind setup <folder>`,
+    detail: isFile(store.path(STORE_MARKER)) ? store.root : `no ${STORE_MARKER} here or above → motionmind setup <folder>`,
     required: false,
   });
   const skillHere = isFile(store.path(".agents", "skills", SKILL, "SKILL.md"));
   const skillHome = isFile(path.join(os.homedir(), ".agents", "skills", SKILL, "SKILL.md")) || isFile(path.join(os.homedir(), ".claude", "skills", SKILL, "SKILL.md"));
-  checks.push({ name: "Skill motionmind", ok: skillHere || skillHome, detail: skillHere ? "workspace" : skillHome ? "global (~)" : "belum terpasang → motionmind skill install", required: false });
-  const agents = (await Promise.all(["claude", "codex", "gemini", "opencode"].map(async (a) => ((await which(a, ["--version"])) !== null ? a : null)))).filter(Boolean);
-  checks.push({ name: "Agen AI CLI", ok: agents.length > 0, detail: agents.length ? agents.join(", ") : "tidak ada claude/codex/gemini/opencode di PATH", required: false });
+  checks.push({ name: "motionmind skill", ok: skillHere || skillHome, detail: skillHere ? "workspace" : skillHome ? "global (~)" : "not installed → motionmind skill install", required: false });
+  const agents = ["claude", "codex", "gemini", "opencode"].filter(onPath);
+  checks.push({ name: "AI agent CLI", ok: agents.length > 0, detail: agents.length ? agents.join(", ") : "no claude/codex/gemini/opencode on PATH", required: false });
 
   const lines = checks.map((c) => `${c.ok ? "✓" : c.required ? "✗" : "!"} ${c.name.padEnd(34)} ${c.detail}`);
   return { lines, ok: checks.every((c) => c.ok || !c.required) };

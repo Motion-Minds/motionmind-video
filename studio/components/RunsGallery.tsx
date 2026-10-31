@@ -19,18 +19,20 @@ export interface RunCard {
   aspect: string | null;
   spec: string | null;
   lufs: number | null;
+  /** Loudness QA violations of a logged video (`qaIssues`); empty when it passes or has no measurements. */
+  qaIssues: string[];
 }
 
 const STATUS_FILTERS: { id: string; label: string }[] = [
   { id: "production", label: "Production" },
   { id: "staging", label: "Staging" },
   { id: "archived", label: "Archived" },
-  { id: "unlogged", label: "Belum di-log" },
-  { id: "gambar", label: "Gambar" },
+  { id: "unlogged", label: "Not logged" },
+  { id: "image", label: "Images" },
 ];
 
 /** Image deliverables are never logged to the registry, so they form their own status bucket. */
-const bucket = (r: RunCard) => (r.kind === "gambar" ? "gambar" : (r.stage ?? "unlogged"));
+const bucket = (r: RunCard) => (r.kind === "image" ? "image" : (r.stage ?? "unlogged"));
 
 export function RunsGallery({ runs }: { runs: RunCard[] }) {
   const [project, setProject] = useState("all");
@@ -47,7 +49,7 @@ export function RunsGallery({ runs }: { runs: RunCard[] }) {
         {projects.length > 1 && (
           <div className="chips">
             <button className={`chip ${project === "all" ? "on" : ""}`} onClick={() => setProject("all")}>
-              Semua campaign
+              All campaigns
             </button>
             {projects.map((p) => (
               <button key={p} className={`chip ${project === p ? "on" : ""}`} onClick={() => setProject(p)}>
@@ -59,7 +61,7 @@ export function RunsGallery({ runs }: { runs: RunCard[] }) {
         {statuses.length > 1 && (
           <div className="chips">
             <button className={`chip ${stage === "all" ? "on" : ""}`} onClick={() => setStage("all")}>
-              Semua
+              All
             </button>
             {statuses.map((s) => (
               <button key={s.id} className={`chip ${stage === s.id ? "on" : ""}`} onClick={() => setStage(s.id)}>
@@ -70,7 +72,7 @@ export function RunsGallery({ runs }: { runs: RunCard[] }) {
         )}
       </div>
       {shown.length === 0 ? (
-        <div className="empty">Tidak ada run untuk filter ini.</div>
+        <div className="empty">No runs match this filter.</div>
       ) : (
         <div className="grid cards">
           {shown.map((r) => (
@@ -89,10 +91,15 @@ export function RunsGallery({ runs }: { runs: RunCard[] }) {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={r.imageUrl} alt="" loading="lazy" />
                 ) : (
-                  <span className="muted small">belum ada output</span>
+                  <span className="muted small">no output yet</span>
                 )}
                 <div className="thumb-top">
-                  {r.kind === "gambar" ? <span className="pill">gambar</span> : <StagePill stage={r.stage} />}
+                  {r.kind === "image" ? <span className="pill">image</span> : <StagePill stage={r.stage} />}
+                  {r.qaIssues.length > 0 && (
+                    <span className="pill stage-staging" title={r.qaIssues.join("\n")}>
+                      QA ✗
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="run-body">

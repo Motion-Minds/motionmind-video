@@ -9,20 +9,20 @@ export default function AllRunsPage() {
   const videos = runs.filter((r) => r.kind === "video");
   return (
     <RunsOverview
-      title="Semua run"
+      title="All runs"
       lead={
         <>
-          Semua versi di <code>projects/*/*/runs/</code> store ini, video dan gambar. Stage dan metrik video berasal dari <code>registry.json</code>{" "}
-          (<code>motionmind log</code>, autolog proyek yang dilacak, atau form di halaman run).
+          Every version in this store&rsquo;s <code>projects/*/*/runs/</code>, video and images. Stages and video metrics come from <code>registry.json</code>{" "}
+          (<code>motionmind log</code>, autolog of tracked projects, or the form on a run page).
         </>
       }
       kpis={[
         { label: "Video", value: videos.length },
-        { label: "Gambar", value: runs.filter((r) => r.kind === "gambar").length },
+        { label: "Images", value: runs.filter((r) => r.kind === "image").length },
         { label: "Production", value: videos.filter((r) => r.registry?.stage === "production").length },
-        { label: "Video belum di-log", value: videos.filter((r) => !r.registry).length },
-        { label: "Belum ada output", value: runs.filter((r) => r.kind === "empty").length },
-        { label: "Campaign", value: campaigns.length },
+        { label: "Unlogged videos", value: videos.filter((r) => !r.registry).length },
+        { label: "No output yet", value: runs.filter((r) => r.kind === "empty").length },
+        { label: "Campaigns", value: campaigns.length },
       ]}
       runs={runs}
     />

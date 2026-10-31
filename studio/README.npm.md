@@ -14,8 +14,10 @@ This package gives you three things:
 
 - **`motionmind` skill** for Claude Code, Codex, Gemini CLI, OpenCode and other agents that read `SKILL.md`: a
   four-gate workflow (concepts → storyboard → review → production), HyperFrames rules, motion and sound guidance, QA.
-- **`motionmind` CLI**: creates versions, renders them with a pinned HyperFrames, measures loudness, records everything.
-- **MotionMind Studio** (`motionmind ui`): a local dashboard to watch, compare and promote versions.
+- **`motionmind` CLI**: creates versions, renders them with a pinned HyperFrames, measures loudness, records everything,
+  and refuses to promote a version that misses the loudness rules unless you override it.
+- **MotionMind Studio** (`motionmind ui`): a local dashboard to watch, compare and promote versions, with QA status per
+  version.
 
 ## Install
 
@@ -23,7 +25,13 @@ This package gives you three things:
 npm i -g motionmind
 ```
 
-Requires Node.js 22+ and `ffmpeg`/`ffprobe` on `PATH`. HyperFrames and its headless Chrome are fetched on first use.
+Runs on macOS, Linux and Windows. Requires Node.js 22+ and `ffmpeg`/`ffprobe` on `PATH`. HyperFrames and its headless
+Chrome are fetched on first use. The package includes the Studio's Next.js runtime (about 330 MB installed).
+
+- **Linux ARM64:** no headless Chrome build exists; install Chromium and
+  `export HYPERFRAMES_BROWSER_PATH=$(command -v chromium)`. Minimal Linux images and Docker also need Chrome's system
+  libraries (HyperFrames prints the `apt-get` line) and `--shm-size=1g`.
+- **Windows PowerShell:** quote comma lists, e.g. `motionmind music … --sections "0:tense,2:groove"`.
 
 ## Quick start
 
@@ -63,7 +71,7 @@ motionmind log ./final.mp4 --campaign acme/launch-15s --param skill_engine="my-s
 | `setup` · `doctor` · `skill install` | workspace, prerequisites, agent skill |
 | `ui` · `watch` | Studio and autolog of tracked projects |
 | `init` · `import` · `edit` · `render` | author, edit (HyperFrames Studio) and render versions |
-| `log` · `track` · `promote` · `list` · `compare` | record, stage and compare versions |
+| `log` · `track` · `promote` · `list` · `compare` | record, stage and compare versions; new versions start as `staging`, production requires −14 ±0.5 LUFS and true peak ≤ −1 dBFS (`--force` overrides) |
 | `music` · `sfx` | deterministic music bed, CC0 starter SFX pack |
 
 `motionmind help` lists every option.

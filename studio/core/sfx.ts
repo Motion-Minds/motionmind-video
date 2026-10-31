@@ -50,7 +50,7 @@ export function sfxLibrary(): string {
   }
   if (lib) {
     const resolved = path.resolve(expandHome(lib));
-    if (!isDir(resolved)) throw new UserError(`SFX library tidak ditemukan: ${resolved} (atur env MOTIONMIND_SFX atau sfx_library di ${config})`);
+    if (!isDir(resolved)) throw new UserError(`SFX library not found: ${resolved} (set env MOTIONMIND_SFX or sfx_library in ${config})`);
     return resolved;
   }
   const home = path.join(os.homedir(), ".motionmind", "sfx");
@@ -70,7 +70,7 @@ async function duration(file: string): Promise<number | null> {
     const value = Number.parseFloat(stdout.trim());
     return Number.isFinite(value) ? Number(value.toFixed(3)) : null;
   } catch (err) {
-    if (err instanceof Error && "code" in err && err.code === "ENOENT") throw new UserError("ffprobe tidak ditemukan di PATH; pasang ffmpeg dulu.");
+    if (err instanceof Error && "code" in err && err.code === "ENOENT") throw new UserError("ffprobe not found on PATH; install ffmpeg first.");
     return null;
   }
 }
@@ -120,7 +120,7 @@ export async function scan(lib: string): Promise<{ lines: string[] }> {
       tags: old?.tags ?? [],
       notes: old?.notes ?? "",
     };
-    if (old && old.sha1 !== entry.sha1) entry.notes = `${entry.notes} · file berubah ${today}`.replace(/^[ ·]+|[ ·]+$/g, "");
+    if (old && old.sha1 !== entry.sha1) entry.notes = `${entry.notes} · file changed ${today}`.replace(/^[ ·]+|[ ·]+$/g, "");
     if (!old) added.push(rel);
     sounds.push(entry);
   }
@@ -129,15 +129,15 @@ export async function scan(lib: string): Promise<{ lines: string[] }> {
   Object.assign(catalog, { updated_at: now, sounds });
   fs.writeFileSync(path.join(lib, CATALOG), `${JSON.stringify(catalog, null, 2)}\n`);
   const unlicensed = sounds.filter((s) => !s.license).length;
-  const lines = [`${path.join(lib, CATALOG)} · ${sounds.length} suara · ${added.length} baru · ${removed.length} hilang · ${unlicensed} tanpa lisensi`];
-  lines.push(...added.map((f) => `  + ${f}`), ...removed.map((f) => `  - ${f}`), ...skipped.map((f) => `  ? ${f} (bukan file audio yang dikenal, dilewati)`));
-  if (unlicensed) lines.push("Isi `source` dan `license` untuk file tanpa lisensi sebelum dipakai di video komersial.");
+  const lines = [`${path.join(lib, CATALOG)} · ${sounds.length} sounds · ${added.length} new · ${removed.length} gone · ${unlicensed} without licence`];
+  lines.push(...added.map((f) => `  + ${f}`), ...removed.map((f) => `  - ${f}`), ...skipped.map((f) => `  ? ${f} (not a known audio file, skipped)`));
+  if (unlicensed) lines.push("Fill in `source` and `license` for unlicensed files before using them in commercial videos.");
   return { lines };
 }
 
 export function list(lib: string, filter: { category?: string; query?: string; unlicensed?: boolean }): { lines: string[] } {
   const sounds = load(lib).sounds;
-  if (!sounds.length) throw new UserError("catalog.json kosong; jalankan `motionmind sfx scan` dulu.");
+  if (!sounds.length) throw new UserError("catalog.json is empty; run `motionmind sfx scan` first.");
   const category = filter.category?.toLowerCase();
   const query = filter.query?.toLowerCase();
   const rows = sounds.filter(
@@ -146,7 +146,7 @@ export function list(lib: string, filter: { category?: string; query?: string; u
       (!query || `${s.file} ${s.tags.join(" ")}`.toLowerCase().includes(query)) &&
       (!filter.unlicensed || !s.license),
   );
-  const lines = rows.map((s) => `${s.id.padEnd(44)} ${(s.duration_s || 0).toFixed(2).padStart(6)}s  ${(s.license || "(lisensi?)").padEnd(14)} ${s.file}`);
-  lines.push(`${rows.length} suara · library: ${lib}`);
+  const lines = rows.map((s) => `${s.id.padEnd(44)} ${(s.duration_s || 0).toFixed(2).padStart(6)}s  ${(s.license || "(licence?)").padEnd(14)} ${s.file}`);
+  lines.push(`${rows.length} sounds · library: ${lib}`);
   return { lines };
 }
