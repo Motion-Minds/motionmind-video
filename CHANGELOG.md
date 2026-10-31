@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
 
 - Windows: HyperFrames commands (`init`, `render`, `edit`, `doctor`, `setup`) run npm's `npx-cli.js` with Node instead
   of `npx`, which `execFile` cannot start on Windows (`npx.cmd`). `doctor` finds agent CLIs installed as `.cmd`
