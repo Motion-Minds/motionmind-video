@@ -12,7 +12,13 @@ reproduce, and the impact you see. You will get a reply within 7 days.
 
 ## Scope notes
 
-- MotionMind Studio (`motionmind ui`) is a local tool: it binds to `127.0.0.1` and serves files from the workspace's
-  `projects/` and `shared/` folders only. Exposing it on a network interface (`--host 0.0.0.0`) is not supported.
+- MotionMind Studio (`motionmind ui`) is a local tool with no login: it binds to `127.0.0.1` and serves files from the
+  workspace's `projects/` and `shared/` folders only. It answers only loopback `Host` names (or the name given with
+  `--host`), and accepts form posts only from its own pages. Exposing it on a network interface (`--host 0.0.0.0`) is
+  not supported.
+- Workspace files (design boards, SVG, Markdown written by agents) are treated as untrusted: HTML and SVG run in a
+  sandbox with an opaque origin, and Markdown is rendered without raw HTML.
+- `motionmind edit` starts HyperFrames Studio, which has its own server; stop edit sessions when done
+  (`motionmind edit … --stop`).
 - The CLI runs `npx hyperframes`, `ffmpeg` and `ffprobe` on files in your workspace. Treat HyperFrames projects from
   others like any code you run.

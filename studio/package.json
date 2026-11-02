@@ -1,6 +1,6 @@
 {
   "name": "motionmind",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Make videos with your AI coding agent (HyperFrames) and track every version: agent skill, CLI and a local studio — MLflow-style.",
   "keywords": ["video", "motion-graphics", "hyperframes", "ai-agent", "agent-skills", "claude-code", "codex", "mlflow", "gsap", "cli"],
   "author": "Vinzzztty",
@@ -35,6 +35,7 @@
     "starter-kits",
     "templates",
     "next.config.ts",
+    "proxy.ts",
     "tsconfig.json",
     "NOTICE.md"
   ],

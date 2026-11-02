@@ -1,6 +1,6 @@
-import { marked } from "marked";
+import { renderMarkdown } from "@/lib/markdown";
 
-/** Renders trusted hub markdown (RULES.md, TASTE.md, breakdown.md, …). */
+/** Workspace markdown (RULES.md, TASTE.md, breakdown.md, …), rendered without raw HTML or script URLs. */
 export function Markdown({ source }: { source: string }) {
-  return <div className="prose" dangerouslySetInnerHTML={{ __html: marked.parse(source, { async: false, gfm: true }) }} />;
+  return <div className="prose" dangerouslySetInnerHTML={{ __html: renderMarkdown(source) }} />;
 }

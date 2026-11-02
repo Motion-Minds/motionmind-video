@@ -74,6 +74,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ path
     "Accept-Ranges": "bytes",
     "Cache-Control": "no-cache",
     "Last-Modified": stat.mtime.toUTCString(),
+    // Workspace files are not trusted: an HTML/SVG opened from here runs in an opaque origin, never as the Studio.
+    // Browsers ignore this header on <img>/<video> subresources, so it is safe on every file.
+    "Content-Security-Policy": "sandbox allow-scripts",
+    "X-Content-Type-Options": "nosniff",
   });
   const range = /^bytes=(\d*)-(\d*)$/.exec(request.headers.get("range") ?? "");
   if (range && (range[1] || range[2])) {

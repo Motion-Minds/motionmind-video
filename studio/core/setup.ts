@@ -61,6 +61,7 @@ node_modules/
 .thumbnails/
 .waveform-cache/
 .registry.lock
+.registry.lock.stale
 `;
 
 export interface SetupOptions {

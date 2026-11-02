@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs, type ParseArgsConfig } from "node:util";
+import { isLoopback } from "../core/host.ts";
 import * as runs from "../core/runs.ts";
 import { musicBed } from "../core/music.ts";
 import * as sfx from "../core/sfx.ts";
@@ -98,9 +99,15 @@ async function ui(store: Store, argv: string[]) {
   const next = createRequire(import.meta.url).resolve("next/dist/bin/next");
   const mode = values.dev ? "dev" : "start";
   if (!values.dev && !isDir(path.join(PACKAGE_DIR, ".next"))) throw new UserError(`The Studio is not built. Run \`npm run build\` in ${PACKAGE_DIR} or use --dev.`);
-  const child = spawn(process.execPath, [next, mode, "-H", String(values.host), "-p", String(values.port)], {
+  const host = String(values.host);
+  // The Studio refuses any Host header but loopback; a custom --host is added to that allowlist.
+  const allowed = [...(process.env.MOTIONMIND_ALLOWED_HOSTS ?? "").split(","), ...(isLoopback(host) ? [] : [host])].filter(Boolean).join(",");
+  if (!isLoopback(host)) {
+    console.warn(`Warning: --host ${host} exposes the Studio, which has no login: anyone who can reach it can read your workspace and start renders. Use 127.0.0.1 unless you trust that network.`);
+  }
+  const child = spawn(process.execPath, [next, mode, "-H", host, "-p", String(values.port)], {
     cwd: PACKAGE_DIR,
-    env: { ...process.env, MOTIONMIND_STORE: store.root, MOTIONMIND_PACKAGE_DIR: PACKAGE_DIR },
+    env: { ...process.env, MOTIONMIND_STORE: store.root, MOTIONMIND_PACKAGE_DIR: PACKAGE_DIR, MOTIONMIND_ALLOWED_HOSTS: allowed },
     stdio: ["ignore", "inherit", "inherit"],
   });
   const stop = () => child.kill("SIGTERM");

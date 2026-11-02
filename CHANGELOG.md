@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.3.0
+
+Security fix for [GHSA-32j6-cgpv-2pj8](https://github.com/Motion-Minds/motionmind-video/security/advisories/GHSA-32j6-cgpv-2pj8)
+(reported by @dhaniarfebrin). Everyone running `motionmind ui` should update.
+
+- Studio refuses requests whose `Host` is not loopback (DNS rebinding); POSTs must also come from the Studio's own
+  origin (`Origin`, `Sec-Fetch-Site`). `motionmind ui --host <name>` adds that name to the allowlist and warns that the
+  Studio has no login.
+- Workspace files are untrusted: `/media` serves every file with `Content-Security-Policy: sandbox allow-scripts` and
+  `nosniff`, and the design board iframe is sandboxed, so HTML/SVG never run as the Studio. Design boards can no
+  longer load fonts from `/media` (system fonts or embedded fonts still work).
+- Markdown (breakdown, TASTE, PROGRESS, docs) shows raw HTML as text and drops `javascript:`/`data:` links.
+- `promote`/`compare` resolve a run_id first, refuse an ambiguous bare version and accept `--campaign`;
+  `motionmind --version` (#3).
+- The registry lock survives concurrent writers and stale locks; a corrupt `.editing.json` no longer breaks the
+  Studio (#4).
+- Run creation is atomic: a failed `log`/`init`/`import` leaves no folder or stale `PROGRESS.md`, run_ids no longer
+  collide, versions are claimed under the registry lock (#5).
+- `render` refuses production/archived runs unless `--force` (logged to `LOG.md`); `edit`/`render` validate the
+  version (#6).
+- Tests: zero-dependency `node:test` suite (`npm test`), run in CI (#2). Thanks @dhaniarfebrin for #2–#6.
+
 ## 0.2.0
 
 - Windows: HyperFrames commands (`init`, `render`, `edit`, `doctor`, `setup`) run npm's `npx-cli.js` with Node instead

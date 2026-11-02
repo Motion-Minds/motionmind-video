@@ -204,7 +204,8 @@ export default async function RunPage({ params }: { params: Promise<{ brand: str
             <summary>
               Design board <span className="muted small mono">{run.design}</span>
             </summary>
-            <iframe className="design-frame" src={mediaUrl(run.design)} title="Design board" />
+            {/* No allow-same-origin: the board's scripts run, but never as the Studio. */}
+            <iframe className="design-frame" src={mediaUrl(run.design)} title="Design board" sandbox="allow-scripts" />
           </details>
         </section>
       )}
