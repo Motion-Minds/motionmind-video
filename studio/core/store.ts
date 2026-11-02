@@ -209,13 +209,47 @@ export function nextVersionNumber(store: Store, campaign: string): number {
 
 export const defaultRunId = (campaign: string, version: string) => `${campaign.replace("/", "-")}-${version.split("-")[0]}`;
 
-function writeAtomic(file: string, text: string) {
+/** Write via a temp file and rename, so readers never see a half-written file. */
+export function writeAtomic(file: string, text: string) {
   const tmp = `${file}.${process.pid}.tmp`;
   fs.writeFileSync(tmp, text);
   fs.renameSync(tmp, file);
 }
 
-function withLock<T>(lockFile: string, fn: () => T): T {
+/** PID written in a lock file; null when the file is gone (its holder released it). */
+function lockOwner(lockFile: string): number | null {
+  try {
+    return Number(fs.readFileSync(lockFile, "utf8"));
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
+  }
+}
+
+/**
+ * Remove a lock whose holder died. A second lock file serialises this step: two waiters that both saw the same dead
+ * PID must not both remove the lock, or the slower one deletes the lock the faster one has just taken.
+ */
+function removeStaleLock(lockFile: string, deadOwner: number): boolean {
+  const guard = `${lockFile}.stale`;
+  try {
+    fs.writeFileSync(guard, String(process.pid), { flag: "wx" });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+    // Another waiter is removing it; clear the guard only if that waiter died mid-way.
+    const holder = lockOwner(guard);
+    if (holder && !pidAlive(holder)) fs.rmSync(guard, { force: true });
+    return false;
+  }
+  try {
+    if (lockOwner(lockFile) === deadOwner) fs.rmSync(lockFile, { force: true });
+    return true;
+  } finally {
+    fs.rmSync(guard, { force: true });
+  }
+}
+
+export function withLock<T>(lockFile: string, fn: () => T): T {
   const deadline = Date.now() + 10_000;
   for (;;) {
     try {
@@ -223,9 +257,10 @@ function withLock<T>(lockFile: string, fn: () => T): T {
       break;
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
-      const owner = Number(fs.readFileSync(lockFile, "utf8"));
-      if (owner && !pidAlive(owner)) fs.rmSync(lockFile, { force: true });
-      else if (Date.now() > deadline) throw new UserError(`Registry is locked by PID ${owner} (${lockFile}).`);
+      const owner = lockOwner(lockFile);
+      if (owner === null) continue; // released between our attempt and the read: try again at once
+      if (owner && !pidAlive(owner) && removeStaleLock(lockFile, owner)) continue;
+      if (Date.now() > deadline) throw new UserError(`Registry is locked by PID ${owner} (${lockFile}).`);
       else Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
     }
   }

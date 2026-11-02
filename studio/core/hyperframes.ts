@@ -4,7 +4,7 @@ import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import { run } from "./media.ts";
-import { isFile, pidAlive, stamp, UserError } from "./store.ts";
+import { isFile, pidAlive, stamp, UserError, writeAtomic } from "./store.ts";
 
 export const HF_VERSION = "0.8.214";
 export const HF_RESOLUTIONS = ["portrait", "landscape", "square"] as const;
@@ -121,10 +121,16 @@ export function pin(src: string) {
   fs.writeFileSync(pkgFile, JSON.stringify(pkg, null, 2) + "\n");
 }
 
+/** The edit lock if its preview process still runs. A missing, unreadable or malformed lock counts as no lock. */
 export function readLock(lockFile: string): EditLock | null {
-  if (!isFile(lockFile)) return null;
-  const lock = JSON.parse(fs.readFileSync(lockFile, "utf8")) as EditLock;
-  if (pidAlive(lock.pid)) return lock;
+  let lock: Partial<EditLock> | null;
+  try {
+    lock = JSON.parse(fs.readFileSync(lockFile, "utf8"));
+  } catch {
+    return null;
+  }
+  if (!lock || typeof lock !== "object" || !Number.isInteger(lock.pid) || lock.pid! <= 0) return null;
+  if (pidAlive(lock.pid!)) return lock as EditLock;
   fs.rmSync(lockFile, { force: true });
   return null;
 }
@@ -153,7 +159,7 @@ export async function openEditor(dir: string, lockFile: string): Promise<EditLoc
     throw new UserError(`HyperFrames preview failed to start:\n${res.output}${status.output}`);
   }
   const lock: EditLock = { pid, port, url, started_at: stamp(), dir };
-  fs.writeFileSync(lockFile, JSON.stringify(lock, null, 2) + "\n");
+  writeAtomic(lockFile, JSON.stringify(lock, null, 2) + "\n");
   return lock;
 }
 
