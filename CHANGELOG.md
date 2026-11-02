@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1
+
+- Compare: picking A fills B with A's previous version in the same campaign (same aspect ratio first; the next
+  version when A is the oldest), also when opened from a run's Compare button. B's list starts with those
+  suggestions. Both lists group runs by campaign, newest logged first, and show each run's logged date and stage.
+
 ## 0.3.0
 
 Security fix for [GHSA-32j6-cgpv-2pj8](https://github.com/Motion-Minds/motionmind-video/security/advisories/GHSA-32j6-cgpv-2pj8)

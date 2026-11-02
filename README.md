@@ -160,7 +160,7 @@ Revise acme/launch-15s v2: the CTA is too small and the second scene is rushed. 
 <table>
 <tr>
 <td width="50%"><img src="https://raw.githubusercontent.com/Motion-Minds/motionmind-video/main/docs/gallery/studio-runs.jpg" alt="All runs with stage, resolution and loudness"><br><b>All runs</b><br><sub>Every version with stage, resolution, loudness and engine, filtered by campaign or stage.</sub></td>
-<td width="50%"><img src="https://raw.githubusercontent.com/Motion-Minds/motionmind-video/main/docs/gallery/studio-compare.jpg" alt="Two versions side by side"><br><b>Compare</b><br><sub>Two versions played in sync, with a table of what changed: parameters, loudness, size.</sub></td>
+<td width="50%"><img src="https://raw.githubusercontent.com/Motion-Minds/motionmind-video/main/docs/gallery/studio-compare.jpg" alt="Two versions side by side"><br><b>Compare</b><br><sub>Two versions played in sync, with a table of what changed: parameters, loudness, size. Pick A and B is suggested (its previous version); runs are listed by campaign, newest logged first.</sub></td>
 </tr>
 <tr>
 <td><img src="https://raw.githubusercontent.com/Motion-Minds/motionmind-video/main/docs/gallery/studio-run.jpg" alt="One run with player and registry"><br><b>Run page</b><br><sub>Player with 4:5 safe-area overlay, contact sheet, breakdown, parameters, stage, Edit in HyperFrames, Render.</sub></td>

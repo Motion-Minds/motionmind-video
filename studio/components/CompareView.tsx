@@ -1,26 +1,30 @@
 "use client";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { groupByCampaign, suggestionsFor, type CompareRun } from "@/lib/compare";
 
-export interface CompareRun {
-  dir: string;
-  label: string;
-  mp4Url: string;
-  fields: Record<string, string>;
-}
+const optionLabel = (r: CompareRun) => `${r.version} · ${r.registeredLabel} · ${r.stage}`;
 
 export function CompareView({ runs, a, b }: { runs: CompareRun[]; a: string | null; b: string | null }) {
   const router = useRouter();
   const pathname = usePathname();
   const left = runs.find((r) => r.dir === a) ?? null;
   const right = runs.find((r) => r.dir === b) ?? null;
+  const groups = groupByCampaign(runs);
+  const suggested = left ? suggestionsFor(left, runs) : [];
   const refs = [useRef<HTMLVideoElement>(null), useRef<HTMLVideoElement>(null)];
   const [playing, setPlaying] = useState(false);
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
   const select = (side: "a" | "b", dir: string) => {
-    const q = new URLSearchParams({ ...(a ? { a } : {}), ...(b ? { b } : {}), [side]: dir });
+    let nextB = side === "b" ? dir : b;
+    if (side === "a") {
+      // A new A gets a B from its own campaign, unless B was already picked there.
+      const newA = runs.find((r) => r.dir === dir);
+      if (newA && (!right || right.dir === dir || right.project !== newA.project)) nextB = suggestionsFor(newA, runs)[0]?.dir ?? null;
+    }
+    const q = new URLSearchParams({ ...(side === "a" ? { a: dir } : a ? { a } : {}), ...(nextB ? { b: nextB } : {}) });
     router.replace(`${pathname}?${q}`);
   };
   const videos = () => refs.map((r) => r.current).filter((v): v is HTMLVideoElement => v !== null);
@@ -67,16 +71,36 @@ export function CompareView({ runs, a, b }: { runs: CompareRun[]; a: string | nu
           const run = side === "a" ? left : right;
           return (
             <div key={side}>
-              <select value={run?.dir ?? ""} onChange={(e) => select(side, e.target.value)} style={{ marginBottom: 10 }}>
+              <select value={run?.dir ?? ""} onChange={(e) => select(side, e.target.value)} style={{ marginBottom: 6 }}>
                 <option value="" disabled>
                   Select run {side.toUpperCase()}…
                 </option>
-                {runs.map((r) => (
-                  <option key={r.dir} value={r.dir}>
-                    {r.label}
-                  </option>
+                {side === "b" && suggested.length > 0 && (
+                  <optgroup label={`Suggested for A · ${left!.project}`}>
+                    {suggested.map((r) => (
+                      <option key={`s-${r.dir}`} value={r.dir}>
+                        {optionLabel(r)}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {groups.map((g) => (
+                  <optgroup key={g.project} label={g.project}>
+                    {g.runs.map((r) => (
+                      <option key={r.dir} value={r.dir}>
+                        {optionLabel(r)}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
+              <p className="muted small" style={{ marginBottom: 10, minHeight: "1.4em" }}>
+                {run && `${run.project} · logged ${run.registeredLabel}`}
+                {side === "b" && run && run.dir === suggested[0]?.dir &&
+                  (run.registeredAt < left!.registeredAt || (run.registeredAt === left!.registeredAt && run.versionNumber < left!.versionNumber)
+                    ? " · suggested: the version before A"
+                    : " · suggested: the version after A")}
+              </p>
               <div className="player">
                 {run ? <video ref={refs[i]} src={run.mp4Url} playsInline preload="auto" muted={i === 1} /> : <div className="empty">Nothing selected</div>}
               </div>
