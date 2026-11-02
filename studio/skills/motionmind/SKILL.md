@@ -41,7 +41,7 @@ Details, file templates and versioning rules: `references/workflow.md`.
 ```bash
 motionmind init <brand>/<campaign> v<N>-<slug> --engine hyperframes --resolution portrait|landscape|square
 motionmind edit <brand>/<campaign> v<N>-<slug> [--stop]     # HyperFrames Studio for the user; locks the run
-motionmind render <brand>/<campaign> v<N>-<slug>            # video.mp4 + contact-sheet.png, updates a logged run
+motionmind render <brand>/<campaign> v<N>-<slug>            # video.mp4 + contact-sheet.png, updates a logged staging run; production/archived are frozen
 motionmind log projects/<brand>/<campaign>/runs/<v>/video.mp4 --campaign <brand>/<campaign> \
   --stage staging --title "…" --param concept_name="…" --param hook_copy="…" --param cta_copy="…"
 motionmind promote <run_id> --stage production             # refused while QA fails; --force only on the user's explicit say-so
@@ -55,7 +55,7 @@ Inside a run's `src/`: `npx hyperframes@<pinned> check` and `npx hyperframes@<pi
 
 ## 3. Non-negotiables
 - **One version = one folder.** A new hook, palette, music, aspect ratio or creative direction is a new
-  `v<N+1>` (`motionmind init`); only technical fixes before approval happen in place. Never overwrite a rendered version.
+  `v<N+1>` (`motionmind init`); only technical fixes before approval happen in place. Never overwrite a rendered version (`motionmind render` refuses a production/archived run).
 - **Edit lock.** If `runs/<v>/.editing.json` exists the user is editing in HyperFrames Studio: do not touch `src/`.
   When it is gone, run `npx hyperframes history` in `src/` and continue from the user's changes.
 - **Determinism.** Every frame is a function of time only: no `Math.random()`, `Date`, timers, or state carried

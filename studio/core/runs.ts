@@ -117,6 +117,7 @@ export async function importRun(store: Store, opts: { source: string; campaign: 
 /** Target of edit/render: a run's src/ (version given) or the tracked project's own folder (no version). */
 function editTarget(store: Store, campaign: string, version?: string): { dir: string; lock: string; label: string } {
   if (version) {
+    if (!VERSION.test(version)) throw new UserError(`Version must look like v<N>-<slug>, e.g. v1-first-cut: '${version}'`);
     const runDir = store.runDir(campaign, version);
     const src = path.join(runDir, "src");
     if (!hf.isProject(src)) throw new UserError(`'${store.rel(runDir)}' is not a HyperFrames run (src/ holds no HyperFrames project).`);
@@ -143,7 +144,8 @@ export async function editRun(store: Store, opts: { campaign: string; version?: 
   return { lines: [`HyperFrames Studio: ${lock.url}`], href: lock.url };
 }
 
-export async function renderRun(store: Store, opts: { campaign: string; version?: string; crf?: number }): Promise<Result> {
+/** With a version, a production or archived run is frozen: its video.mp4 is only replaced with `force` (logged). */
+export async function renderRun(store: Store, opts: { campaign: string; version?: string; crf?: number; force?: boolean }): Promise<Result> {
   const { campaign } = parseCampaign(opts.campaign);
   const t = editTarget(store, campaign, opts.version);
   const warn = hf.readLock(t.lock) ? ["Warning: the project is open in HyperFrames Studio; the render uses the files saved so far."] : [];
@@ -160,17 +162,25 @@ export async function renderRun(store: Store, opts: { campaign: string; version?
   const runDir = store.runDir(campaign, opts.version);
   const video = path.join(runDir, "video.mp4");
   const tmp = path.join(runDir, "cache", "render.mp4");
+  const runRel = store.rel(runDir);
+  const logged = store.readRegistry().runs.find((r) => r.run_dir === runRel);
+  const frozen = logged && (logged.stage === "production" || logged.stage === "archived") ? logged : undefined;
+  if (frozen && !opts.force) {
+    throw new UserError(`'${frozen.run_id}' (${opts.version}) is ${frozen.stage}: its video is frozen. Create v<N+1> (motionmind init), or re-render in place with: motionmind render ${campaign} ${opts.version} --force`);
+  }
+  const replaced = frozen ? (await sha256(video))?.slice(0, 12) ?? "none" : "";
   await hf.render(t.dir, tmp, opts.crf);
   fs.renameSync(tmp, video);
   const m = await probe(video);
   await contactSheet(video, path.join(runDir, "contact-sheet.png"), m.duration_s);
   store.appendLog(campaign, `render ${opts.version} · hyperframes ${hf.versionOf(t.dir)} crf ${opts.crf ?? 18} · video.mp4 + contact-sheet.png · ${m.width}x${m.height} ${m.duration_s} s, ${m.integrated_lufs} LUFS / TP ${m.true_peak_dbfs}`);
+  if (frozen) store.appendLog(campaign, `render ${opts.version} · --force on a ${frozen.stage} run · replaced video sha256 ${replaced}`);
   const issues = qaIssues(m);
   const lines = [...warn, `${store.rel(video)} · ${m.width}x${m.height} · ${m.duration_s} s · ${m.size_mb} MB · ${m.integrated_lufs ?? "—"} LUFS · TP ${m.true_peak_dbfs ?? "—"} dBFS`];
+  if (frozen) lines.push(`Forced: the ${frozen.stage} video of '${frozen.run_id}' was replaced (previous sha256 ${replaced}).`);
   // An already-logged run keeps its stage/title and gets the measurements of the new file, except that a production
   // run whose new render fails QA drops back to staging (production only ever holds QA-passing or forced renders).
   const hash = await sha256(video);
-  const runRel = store.rel(runDir);
   let demoted = false;
   const updated = store.updateRegistry((reg) => {
     const entry = reg.runs.find((r) => r.run_dir === runRel);
