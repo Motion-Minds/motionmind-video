@@ -55,7 +55,7 @@ Inside a run's `src/`: `npx hyperframes@<pinned> check` and `npx hyperframes@<pi
 
 ## 3. Non-negotiables
 - **One version = one folder.** A new hook, palette, music, aspect ratio or creative direction is a new
-  `v<N+1>` (`motionmind init`); only technical fixes before approval happen in place. Never overwrite a rendered version (`motionmind render` refuses a production/archived run).
+  `v<N+1>` (`motionmind init`); only technical fixes before approval happen in place. Never overwrite an approved version (`motionmind render` refuses a production/archived run; never pass `--force` unless the user asks for it).
 - **Edit lock.** If `runs/<v>/.editing.json` exists the user is editing in HyperFrames Studio: do not touch `src/`.
   When it is gone, run `npx hyperframes history` in `src/` and continue from the user's changes.
 - **Determinism.** Every frame is a function of time only: no `Math.random()`, `Date`, timers, or state carried

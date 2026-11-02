@@ -11,7 +11,7 @@
 │   ├── LOG.md                     append-only: time · action · result (the CLI also appends)
 │   ├── manifest.json              source + licence of every downloaded/generated asset
 │   ├── plan/concepts.md · plan/storyboard.md · plan/design.html
-│   └── runs/v<N>-<slug>/          one rendered version, frozen once rendered
+│   └── runs/v<N>-<slug>/          one rendered version, frozen once promoted
 │       ├── src/                   the HyperFrames project (index.html, compositions/, assets/)
 │       ├── video.mp4 · contact-sheet.png · breakdown.md
 │       └── .editing.json          present while the user edits in HyperFrames Studio

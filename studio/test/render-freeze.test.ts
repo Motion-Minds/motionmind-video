@@ -25,13 +25,24 @@ function fixture(t: TestContext, stage?: Stage) {
   return { store, runDir, video: path.join(runDir, "video.mp4"), log: store.path("projects", "demo", "x", "LOG.md") };
 }
 
-/** A fake `npx` that copies a 1 s silent clip to the path after `-o`, standing in for `hyperframes render`. */
-function fakeNpx(t: TestContext): string {
+/**
+ * A fake `npx` that copies a 1 s clip to the path after `-o`, standing in for `hyperframes render`. With `quietAudio`
+ * the clip carries a −40 dB tone, which fails the loudness QA.
+ */
+function fakeNpx(t: TestContext, quietAudio = false): string {
   const bin = tempDir(t);
   const clip = path.join(bin, "clip.mp4");
-  execFileSync("ffmpeg", ["-v", "error", "-f", "lavfi", "-i", "color=c=black:s=64x64:r=10:d=1", "-pix_fmt", "yuv420p", clip]);
+  const audio = quietAudio ? ["-f", "lavfi", "-i", "sine=f=440:d=1", "-af", "volume=-40dB", "-c:a", "aac", "-shortest"] : [];
+  execFileSync("ffmpeg", ["-v", "error", "-f", "lavfi", "-i", "color=c=black:s=64x64:r=10:d=1", ...audio, "-pix_fmt", "yuv420p", clip]);
   const script = path.join(bin, "npx");
   fs.writeFileSync(script, `#!/bin/sh\nwhile [ $# -gt 0 ]; do if [ "$1" = "-o" ]; then cp "${clip}" "$2"; exit 0; fi; shift; done\nexit 1\n`, { mode: 0o755 });
+  return bin;
+}
+
+/** A fake `npx` that writes "new" to the path after `-o`: no ffmpeg needed, and a render that slips through is visible. */
+function stubNpx(t: TestContext): string {
+  const bin = tempDir(t);
+  fs.writeFileSync(path.join(bin, "npx"), `#!/bin/sh\nwhile [ $# -gt 0 ]; do if [ "$1" = "-o" ]; then printf new > "$2"; exit 0; fi; shift; done\nexit 1\n`, { mode: 0o755 });
   return bin;
 }
 
@@ -44,8 +55,9 @@ function withPath(t: TestContext, bin: string) {
 }
 
 for (const stage of ["production", "archived"] as const) {
-  test(`render of a ${stage} run is refused without --force and changes nothing`, async (t) => {
+  test(`render of a ${stage} run is refused without --force and changes nothing`, { skip: process.platform === "win32" && "needs a POSIX fake npx" }, async (t) => {
     const { store, video, log } = fixture(t, stage);
+    withPath(t, stubNpx(t));
     const registry = fs.readFileSync(store.path("registry.json"), "utf8");
     await assert.rejects(renderRun(store, { campaign: "demo/x", version: "v1-x" }), (err: Error) => /frozen/.test(err.message) && /--force/.test(err.message) && err.message.includes(stage));
     assert.equal(fs.readFileSync(video, "utf8"), "old");
@@ -87,6 +99,16 @@ test("render --force of a production run replaces the video, stays production an
   assert.equal(store.readRegistry().runs[0].stage, "production");
   assert.match(fs.readFileSync(log, "utf8"), new RegExp(`render v1-x · --force on a production run · replaced video sha256 ${sha12("old")}`));
   assert.ok(res.lines.some((l) => l.startsWith("Forced:")));
+});
+
+test("render --force of a production run that fails QA is logged as forced and drops to staging", needsFfmpeg, async (t) => {
+  const { store, log } = fixture(t, "production");
+  withPath(t, fakeNpx(t, true));
+  await renderRun(store, { campaign: "demo/x", version: "v1-x", force: true });
+  assert.equal(store.readRegistry().runs[0].stage, "staging");
+  const text = fs.readFileSync(log, "utf8");
+  assert.match(text, /--force on a production run · replaced video sha256/);
+  assert.match(text, /demote v1-x · demo-x-v1 → staging · new render fails QA/);
 });
 
 test("CLI render of a production run exits 1 without --force and 0 with it", needsFfmpeg, (t) => {
