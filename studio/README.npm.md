@@ -69,9 +69,9 @@ motionmind log ./final.mp4 --campaign acme/launch-15s --param skill_engine="my-s
 | Command | |
 |---|---|
 | `setup` · `doctor` · `skill install` | workspace, prerequisites, agent skill |
-| `ui` · `watch` | Studio and autolog of tracked projects |
-| `init` · `import` · `edit` · `render` | author, edit (HyperFrames Studio) and render versions |
-| `log` · `track` · `promote` · `list` · `compare` | record, stage and compare versions; new versions start as `staging`, production requires −14 ±0.5 LUFS and true peak ≤ −1 dBFS (`--force` overrides) |
+| `ui` · `watch` | Studio (loopback only, sandboxed workspace files) and autolog of tracked projects |
+| `init` · `import` · `edit` · `render` | author, edit (HyperFrames Studio) and render versions; production/archived versions are frozen (`render --force` overrides) |
+| `log` · `track` · `promote` · `list` · `compare` | record, stage and compare versions; new versions start as `staging`, production requires −14 ±0.5 LUFS and true peak ≤ −1 dBFS (`--force` overrides); `--campaign` narrows a bare version |
 | `music` · `sfx` | deterministic music bed, CC0 starter SFX pack |
 
 `motionmind help` lists every option.

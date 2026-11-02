@@ -346,8 +346,10 @@ licence recorded.
 <details>
 <summary><b>Does anything leave my machine?</b></summary>
 
-The Studio binds to `127.0.0.1` and reads local files. HyperFrames is run with telemetry off. Your agent talks to its
-own model provider as usual.
+The Studio binds to `127.0.0.1`, answers only loopback host names (so a web page cannot reach it through DNS
+rebinding), and accepts form posts only from its own pages. Workspace HTML, SVG and Markdown are shown sandboxed, so a
+file an agent wrote cannot act as the Studio. HyperFrames is run with telemetry off. Your agent talks to its own model
+provider as usual. See [`SECURITY.md`](https://github.com/Motion-Minds/motionmind-video/blob/main/SECURITY.md).
 </details>
 
 <details>

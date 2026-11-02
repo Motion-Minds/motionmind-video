@@ -63,7 +63,9 @@ Present them as a short numbered list in chat and wait.
 ```
 
 Lock the style in `TASTE.md` (palette with roles, fonts and sizes, easing family, signature moves, music BPM and
-sections, loudness). Keep `plan/design.html` in sync (swatches, type specimens) so the user can see it.
+sections, loudness). Keep `plan/design.html` in sync (swatches, type specimens) so the user can see it. The Studio
+shows it in a sandbox: relative images and scripts load, but `@font-face` files from the workspace do not, so embed
+brand fonts as `data:` URLs (or show the specimen as an image) when the exact face matters.
 Show the table in chat and wait for approval.
 
 ### 4. Build
