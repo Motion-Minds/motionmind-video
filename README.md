@@ -360,8 +360,9 @@ sit next to `motionmind`; the agent picks whichever fits the request.
 ## Contributing
 
 Issues and pull requests are welcome. Behaviour lives in `studio/core/` (the CLI and Studio share it); a rule for the
-agent goes in `studio/skills/motionmind/`, with the failure it prevents. Run `npm run typecheck` and `npm run build` in
-`studio/`, and bump `version` in `studio/package.json`.
+agent goes in `studio/skills/motionmind/`, with the failure it prevents. Run `npm run typecheck`, `npm test` and
+`npm run build` in `studio/` (tests use Node's built-in runner; Node 22.18 or newer), and bump `version` in
+`studio/package.json`.
 
 ## License
 
