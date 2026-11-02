@@ -44,12 +44,36 @@ function ensureCampaignMemory(store: Store, campaign: string, version: string): 
   return created;
 }
 
+const runExists = (store: Store, dir: string) =>
+  new UserError(`Run '${store.rel(dir)}' already exists. Finished versions are never overwritten; create a new v<N+1>.`);
+
 function newRunDir(store: Store, campaign: string, version: string): string {
   if (!VERSION.test(version)) throw new UserError(`Version must look like v<N>-<slug>, e.g. v1-first-cut: '${version}'`);
   const dir = store.runDir(campaign, version);
   store.assertWritable(dir);
-  if (fs.existsSync(dir)) throw new UserError(`Run '${store.rel(dir)}' already exists. Finished versions are never overwritten; create a new v<N+1>.`);
+  if (fs.existsSync(dir)) throw runExists(store, dir);
   return dir;
+}
+
+/** newRunDir plus the creation itself: a non-recursive mkdir is atomic, so two writers can never both own the same run. */
+function claimRunDir(store: Store, campaign: string, version: string): string {
+  const dir = newRunDir(store, campaign, version);
+  store.ensure();
+  fs.mkdirSync(path.dirname(dir), { recursive: true });
+  try {
+    fs.mkdirSync(dir);
+  } catch (err) {
+    throw (err as NodeJS.ErrnoException).code === "EEXIST" ? runExists(store, dir) : err;
+  }
+  return dir;
+}
+
+/** Claim the next auto-numbered run folder: the number is read and the folder created under the registry lock. */
+export function claimNextRunDir(store: Store, campaign: string, suffix: string): { version: string; runDir: string } {
+  return store.withRegistryLock(() => {
+    const version = `v${nextVersionNumber(store, campaign)}-${suffix}`;
+    return { version, runDir: claimRunDir(store, campaign, version) };
+  });
 }
 
 function breakdownStub(store: Store, runDir: string, campaign: string, version: string, engine: string): string {
@@ -73,19 +97,18 @@ export async function initRun(store: Store, opts: { campaign: string; version: s
   const { brand, campaign } = parseCampaign(opts.campaign);
   const resolution = opts.resolution ?? "portrait";
   if (!(hf.HF_RESOLUTIONS as readonly string[]).includes(resolution)) throw new UserError(`Unknown resolution: ${resolution}`);
-  const runDir = newRunDir(store, campaign, opts.version);
-  store.ensure();
-  const created = ensureCampaignMemory(store, campaign, opts.version);
+  const runDir = claimRunDir(store, campaign, opts.version);
   const src = path.join(runDir, "src");
-  fs.mkdirSync(runDir, { recursive: true });
+  const created: string[] = [];
   try {
+    created.push(...ensureCampaignMemory(store, campaign, opts.version));
     await hf.init(runDir, resolution);
+    created.push(`${store.rel(src)}/ (HyperFrames ${hf.HF_VERSION} project, ${resolution})`, ...seedBrandAssets(store, brand, src));
+    created.push(breakdownStub(store, runDir, campaign, opts.version, `hyperframes ${hf.HF_VERSION}`));
   } catch (err) {
     fs.rmSync(runDir, { recursive: true, force: true });
     throw err;
   }
-  created.push(`${store.rel(src)}/ (HyperFrames ${hf.HF_VERSION} project, ${resolution})`, ...seedBrandAssets(store, brand, src));
-  created.push(breakdownStub(store, runDir, campaign, opts.version, `hyperframes ${hf.HF_VERSION}`));
   store.appendLog(campaign, `init ${opts.version} · engine: hyperframes ${hf.HF_VERSION} (${resolution}) · runs/${opts.version}/ · ok`);
   return {
     lines: [`New run: ${store.rel(runDir)}`, ...created.map((c) => `  + ${c}`)],
@@ -102,14 +125,21 @@ export async function importRun(store: Store, opts: { source: string; campaign: 
   if (origin === runDir || runDir.startsWith(origin + path.sep) || origin.startsWith(runDir + path.sep)) {
     throw new UserError("The import source must not be inside or above the target run.");
   }
-  store.ensure();
-  const created = ensureCampaignMemory(store, campaign, opts.version);
+  claimRunDir(store, campaign, opts.version);
   const src = path.join(runDir, "src");
-  hf.copyProject(origin, src);
-  hf.pin(src);
-  const files = fs.readdirSync(src, { recursive: true }).filter((f) => isFile(path.join(src, String(f)))).length;
-  created.push(`${store.rel(src)}/ (${files} files from ${origin}, hyperframes@${hf.versionOf(src)})`);
-  created.push(breakdownStub(store, runDir, campaign, opts.version, `hyperframes ${hf.versionOf(src)} (import)`));
+  const created: string[] = [];
+  let files = 0;
+  try {
+    created.push(...ensureCampaignMemory(store, campaign, opts.version));
+    hf.copyProject(origin, src);
+    hf.pin(src);
+    files = fs.readdirSync(src, { recursive: true }).filter((f) => isFile(path.join(src, String(f)))).length;
+    created.push(`${store.rel(src)}/ (${files} files from ${origin}, hyperframes@${hf.versionOf(src)})`);
+    created.push(breakdownStub(store, runDir, campaign, opts.version, `hyperframes ${hf.versionOf(src)} (import)`));
+  } catch (err) {
+    fs.rmSync(runDir, { recursive: true, force: true });
+    throw err;
+  }
   store.appendLog(campaign, `import ${opts.version} · from ${origin} · hyperframes ${hf.versionOf(src)} · runs/${opts.version}/src/ · ${files} files`);
   return { lines: [`Imported run: ${store.rel(runDir)}`, ...created.map((c) => `  + ${c}`)], href: `/r/${campaign}/${opts.version}` };
 }
@@ -226,12 +256,37 @@ function slugTime(d: Date) {
   return `${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
 }
 
+/** The short default id (<brand>-<campaign>-v<N>) unless another run's folder already uses it; then the full version, then -2, -3. */
+function uniqueRunId(runs: RegistryRun[], campaign: string, version: string, runRel: string): string {
+  const taken = new Set(runs.filter((r) => r.run_dir !== runRel).map((r) => r.run_id));
+  const full = `${campaign.replace("/", "-")}-${version}`;
+  const free = [defaultRunId(campaign, version), full].find((id) => !taken.has(id));
+  if (free) return free;
+  for (let n = 2; ; n++) if (!taken.has(`${full}-${n}`)) return `${full}-${n}`;
+}
+
 /** Log a rendered video as a run: snapshot it (and its project) into the store, measure it, write the registry. */
 export async function logVideo(store: Store, opts: LogOptions): Promise<Result> {
+  const claim: { dir: string | null } = { dir: null };
+  try {
+    return await recordVideo(store, opts, claim);
+  } catch (err) {
+    // Only a folder this call created and did not register yet: a failed log leaves no half-made run behind.
+    if (claim.dir) fs.rmSync(claim.dir, { recursive: true, force: true });
+    throw err;
+  }
+}
+
+async function recordVideo(store: Store, opts: LogOptions, claim: { dir: string | null }): Promise<Result> {
   const { campaign } = parseCampaign(opts.campaign);
   const videoIn = path.resolve(store.root, expandHome(opts.video));
   if (!isFile(videoIn)) throw new UserError(`Video not found: ${videoIn}`);
   const stage = opts.stage ?? "staging";
+  const campaignRuns = store.campaignDir(campaign) + path.sep + "runs" + path.sep;
+  // Checked before anything is probed or copied: a bad --src must not leave a run folder behind.
+  if (opts.src && !videoIn.startsWith(campaignRuns) && !isDir(path.resolve(expandHome(opts.src)))) {
+    throw new UserError(`Project folder not found: ${path.resolve(expandHome(opts.src))}`);
+  }
   // Measured before anything is copied, so a production log that fails QA leaves nothing behind.
   const metrics = await probe(videoIn);
   const issues = qaIssues(metrics);
@@ -239,7 +294,6 @@ export async function logVideo(store: Store, opts: LogOptions): Promise<Result> 
   if (overridden && !opts.force) throw qaError(path.basename(videoIn), issues);
   store.ensure();
 
-  const campaignRuns = store.campaignDir(campaign) + path.sep + "runs" + path.sep;
   let runDir: string;
   let video: string;
   let version: string;
@@ -251,15 +305,18 @@ export async function logVideo(store: Store, opts: LogOptions): Promise<Result> 
     video = videoIn;
   } else {
     const mtime = fs.statSync(videoIn).mtime;
-    version = opts.version ?? `v${nextVersionNumber(store, campaign)}-${opts.slug ?? "log"}-${slugTime(mtime)}`;
-    runDir = newRunDir(store, campaign, version);
-    fs.mkdirSync(runDir, { recursive: true });
+    if (opts.version) {
+      version = opts.version;
+      runDir = claimRunDir(store, campaign, version);
+    } else {
+      ({ version, runDir } = claimNextRunDir(store, campaign, `${opts.slug ?? "log"}-${slugTime(mtime)}`));
+    }
+    claim.dir = runDir;
     video = path.join(runDir, "video.mp4");
     // A copy-on-write clone where the filesystem supports it (APFS, btrfs, XFS): no second copy on disk.
     fs.copyFileSync(videoIn, video, fs.constants.COPYFILE_FICLONE);
     if (opts.src) {
       const src = path.resolve(expandHome(opts.src));
-      if (!isDir(src)) throw new UserError(`Project folder not found: ${src}`);
       hf.copyProject(src, path.join(runDir, "src"));
       if (hf.isProject(src)) hf.pin(path.join(runDir, "src"));
     }
@@ -273,12 +330,10 @@ export async function logVideo(store: Store, opts: LogOptions): Promise<Result> 
   const srcDir = path.join(runDir, "src");
   const engineParams = hf.isProject(srcDir) ? hf.params(srcDir) : { engine: "mp4" };
   const aspect = aspectOf(metrics);
-  const runId = opts.runId ?? defaultRunId(campaign, version);
   const runRel = store.rel(runDir);
   const hash = await sha256(video);
 
-  const entry: RegistryRun = {
-    run_id: runId,
+  const entry: Omit<RegistryRun, "run_id"> = {
     project: campaign,
     version,
     run_dir: runRel,
@@ -306,12 +361,17 @@ export async function logVideo(store: Store, opts: LogOptions): Promise<Result> 
     notes: opts.notes ?? "",
   };
 
-  store.updateRegistry((reg) => {
-    const clash = reg.runs.find((r) => r.run_id === runId && r.run_dir !== runRel);
-    if (clash) throw new UserError(`run_id '${runId}' is already used by ${clash.project} ${clash.version}; pass another --run-id.`);
-    if (stage === "production") demoteOthers(reg.runs, entry);
-    reg.runs = [...reg.runs.filter((r) => r.run_id !== runId && r.run_dir !== runRel), entry];
+  // The id is chosen under the registry lock, so it is checked against the runs that exist right now.
+  const runId = store.updateRegistry((reg) => {
+    const id = opts.runId ?? reg.runs.find((r) => r.run_dir === runRel)?.run_id ?? uniqueRunId(reg.runs, campaign, version, runRel);
+    const clash = reg.runs.find((r) => r.run_id === id && r.run_dir !== runRel);
+    if (clash) throw new UserError(`run_id '${id}' is already used by ${clash.project} ${clash.version}; pass another --run-id.`);
+    const run: RegistryRun = { run_id: id, ...entry };
+    if (stage === "production") demoteOthers(reg.runs, run);
+    reg.runs = [...reg.runs.filter((r) => r.run_id !== id && r.run_dir !== runRel), run];
+    return id;
   });
+  claim.dir = null;
   store.appendLog(campaign, `log ${version} · ${runId} (${stage}) · ${metrics.width}x${metrics.height} ${metrics.duration_s} s · ${metrics.integrated_lufs != null ? `${metrics.integrated_lufs} LUFS` : "no audio"}${overridden ? ` · QA overridden: ${issues.join("; ")}` : ""}`);
   return {
     lines: [

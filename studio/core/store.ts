@@ -160,6 +160,12 @@ export class Store {
     });
   }
 
+  /** Run fn under the registry lock without writing the registry (e.g. to number a new run). Not re-entrant: never call updateRegistry inside. */
+  withRegistryLock<T>(fn: () => T): T {
+    this.ensure();
+    return withLock(this.path(".registry.lock"), fn);
+  }
+
   campaignDir(campaign: string) {
     return this.path("projects", ...campaign.split("/"));
   }
