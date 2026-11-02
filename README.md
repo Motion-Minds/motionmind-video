@@ -253,7 +253,7 @@ needs the `motionmind` CLI on `PATH` for its commands.
 | `motionmind init b/c v1-slug --engine hyperframes [--resolution portrait\|landscape\|square]` | new version folder with a pinned HyperFrames project and brand assets |
 | `motionmind import <dir> b/c v1-slug` | copy an existing HyperFrames project into a new version |
 | `motionmind edit b/c [version] [--stop]` | open HyperFrames Studio on a version (or the tracked project); locks it for agents |
-| `motionmind render b/c [version]` | render with the pinned CLI, make the contact sheet, measure, update the record |
+| `motionmind render b/c [version] [--force]` | render with the pinned CLI, make the contact sheet, measure, update the record; production/archived versions need `--force` |
 | `motionmind log <video> --campaign b/c [--param k=v] [--metric k=n] [--stage staging\|production\|archived] [--force]` | record any video as a version; stage defaults to `staging` |
 | `motionmind track <dir> --campaign b/c [--backfill]` · `untrack` · `tracked` · `watch [--once]` | autolog renders of a project you edit elsewhere |
 | `motionmind promote <run_id> --stage production\|staging\|archived [--force] [--campaign b/c]` · `list` · `compare <a> <b> [--campaign b/c]` | registry operations; production requires passing QA |

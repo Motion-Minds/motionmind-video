@@ -36,7 +36,7 @@ Track & view:
   motionmind init <brand>/<campaign> <version> [--resolution portrait|landscape|square]   new version: HyperFrames project in the store
   motionmind import <folder> <brand>/<campaign> <version>
   motionmind edit <brand>/<campaign> [version] [--stop]                  HyperFrames Studio; no version = the tracked project
-  motionmind render <brand>/<campaign> [version] [--crf 18]               no version = render the tracked project, then log it
+  motionmind render <brand>/<campaign> [version] [--crf 18] [--force]     no version = render the tracked project, then log it; production/archived need --force
   motionmind promote <run_id> --stage production|staging|archived [--force] [--campaign <brand>/<campaign>]
   motionmind list [--campaign <brand>/<campaign>]
   motionmind compare <run_a> <run_b> [--campaign <brand>/<campaign>]   a version also works when only one campaign has it
@@ -177,8 +177,8 @@ async function main(argv: string[]) {
       return print(await runs.editRun(store, { campaign: need(positionals[0], "Campaign"), version: positionals[1], stop: values.stop }));
     }
     case "render": {
-      const { values, positionals } = args(rest, { crf: { type: "string", default: "18" } });
-      return print(await runs.renderRun(store, { campaign: need(positionals[0], "Campaign"), version: positionals[1], crf: Number(values.crf) }));
+      const { values, positionals } = args(rest, { crf: { type: "string", default: "18" }, force: { type: "boolean" } });
+      return print(await runs.renderRun(store, { campaign: need(positionals[0], "Campaign"), version: positionals[1], crf: Number(values.crf), force: values.force }));
     }
     case "promote": {
       const { values, positionals } = args(rest, { stage: { type: "string" }, force: { type: "boolean" }, campaign: { type: "string" } });
