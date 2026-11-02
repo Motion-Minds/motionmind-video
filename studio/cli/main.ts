@@ -37,9 +37,9 @@ Track & view:
   motionmind import <folder> <brand>/<campaign> <version>
   motionmind edit <brand>/<campaign> [version] [--stop]                  HyperFrames Studio; no version = the tracked project
   motionmind render <brand>/<campaign> [version] [--crf 18]               no version = render the tracked project, then log it
-  motionmind promote <run_id> --stage production|staging|archived [--force]
+  motionmind promote <run_id> --stage production|staging|archived [--force] [--campaign <brand>/<campaign>]
   motionmind list [--campaign <brand>/<campaign>]
-  motionmind compare <run_a> <run_b>
+  motionmind compare <run_a> <run_b> [--campaign <brand>/<campaign>]   a version also works when only one campaign has it
   motionmind music --out <wav> --duration <s> [--bpm 120] [--seed 817]    original music bed (48 kHz stereo WAV, no samples)
            [--sections "0:groove,…"] [--bells "3.0,9.5"] [--duck 9.5:0.2]  sections: <bar>:<kind>, bar counted from 0 (not seconds);
                                                                           kind: tense|calm|groove|lift|outro
@@ -176,8 +176,9 @@ async function main(argv: string[]) {
       return print(await runs.renderRun(store, { campaign: need(positionals[0], "Campaign"), version: positionals[1], crf: Number(values.crf) }));
     }
     case "promote": {
-      const { values, positionals } = args(rest, { stage: { type: "string" }, force: { type: "boolean" } });
-      return print(runs.promote(store, need(positionals[0], "run_id"), need(stageOf(values.stage), "--stage"), values.force));
+      const { values, positionals } = args(rest, { stage: { type: "string" }, force: { type: "boolean" }, campaign: { type: "string" } });
+      const campaign = values.campaign === undefined ? undefined : parseCampaign(values.campaign).campaign;
+      return print(runs.promote(store, need(positionals[0], "run_id"), need(stageOf(values.stage), "--stage"), values.force, campaign));
     }
     case "list": {
       const { values } = args(rest, { campaign: { type: "string" } });
@@ -190,10 +191,10 @@ async function main(argv: string[]) {
       return;
     }
     case "compare": {
-      const { positionals } = args(rest, {});
+      const { values, positionals } = args(rest, { campaign: { type: "string" } });
+      const campaign = values.campaign === undefined ? undefined : parseCampaign(values.campaign).campaign;
       const reg = store.readRegistry().runs;
-      const find = (id: string) => reg.find((r) => r.run_id === id || r.version === id) ?? (() => { throw new UserError(`Run '${id}' not found.`); })();
-      const [a, b] = [find(need(positionals[0], "run_a")), find(need(positionals[1], "run_b"))];
+      const [a, b] = [runs.findRun(reg, need(positionals[0], "run_a"), campaign), runs.findRun(reg, need(positionals[1], "run_b"), campaign)];
       const keys = [...new Set([...Object.keys(a.params), ...Object.keys(b.params)])].map((k) => [`params.${k}`, a.params[k], b.params[k]] as const);
       const metrics = ["width", "height", "fps", "duration_s", "size_mb", "integrated_lufs", "true_peak_dbfs"].map((k) => [`metrics.${k}`, a.metrics[k], b.metrics[k]] as const);
       const rows = [["run_id", a.run_id, b.run_id] as const, ["stage", a.stage, b.stage] as const, ...keys, ...metrics];
