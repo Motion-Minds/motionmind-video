@@ -9,7 +9,7 @@ import { parseArgs, type ParseArgsConfig } from "node:util";
 import * as runs from "../core/runs.ts";
 import { musicBed } from "../core/music.ts";
 import * as sfx from "../core/sfx.ts";
-import { doctor, installSkill, setupWorkspace } from "../core/setup.ts";
+import { doctor, installSkill, packageVersion, setupWorkspace } from "../core/setup.ts";
 import { isDir, parseCampaign, STAGES, Store, UserError, type Stage } from "../core/store.ts";
 
 const PACKAGE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -47,6 +47,7 @@ Track & view:
   motionmind sfx list [--category X] [--query Y] [--unlicensed]           library: ${"$"}MOTIONMIND_SFX, sfx_library, ~/.motionmind/sfx, bundled pack
   motionmind migrate                                                      convert an old hub (dashboard/registry.json) to store 3.0
   motionmind store                                                        print the store location
+  motionmind --version                                                    print the motionmind version
 
 QA: production (log --stage production, promote --stage production) requires −14 ±0.5 LUFS and true peak ≤ −1 dBFS
 when the video has audio; --force overrides and the override is written to LOG.md.`;
@@ -122,6 +123,10 @@ async function main(argv: string[]) {
     case "--help":
     case "-h":
       console.log(HELP);
+      return;
+    case "--version":
+    case "-v":
+      console.log(packageVersion());
       return;
     case "store":
       console.log(store.root);
