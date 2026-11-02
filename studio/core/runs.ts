@@ -398,12 +398,29 @@ function qaWarning(issues: string[]): string[] {
   return issues.length ? [`QA: ${issues.join(" · ")} — promotion to production is blocked until fixed (or forced).`] : [];
 }
 
+/**
+ * The run a CLI reference names: a run_id first, else a version. A version that several campaigns use is ambiguous;
+ * `campaign` (<brand>/<campaign>) narrows the search.
+ */
+export function findRun(runs: RegistryRun[], ref: string, campaign?: string): RegistryRun {
+  const pool = campaign ? runs.filter((r) => r.project === campaign) : runs;
+  const where = campaign ? ` in ${campaign}` : "";
+  const byId = pool.find((r) => r.run_id === ref);
+  if (byId) return byId;
+  const byVersion = pool.filter((r) => r.version === ref);
+  if (byVersion.length === 1) return byVersion[0];
+  if (!byVersion.length) throw new UserError(`Run '${ref}' not found${where}.`);
+  throw new UserError(
+    `'${ref}' matches ${byVersion.length} runs${where}; use the run_id${campaign ? "" : " or add --campaign <brand>/<campaign>"}:\n` +
+      byVersion.map((r) => `  ${r.run_id.padEnd(34)} ${r.project}`).join("\n"),
+  );
+}
+
 /** Production requires the measured QA rules (core/qa.ts) to pass unless `force`. */
-export function promote(store: Store, runId: string, stage: Stage, force = false): Result {
+export function promote(store: Store, runId: string, stage: Stage, force = false, campaign?: string): Result {
   let issues: string[] = [];
   const target = store.updateRegistry((reg) => {
-    const t = reg.runs.find((r) => r.run_id === runId || r.version === runId);
-    if (!t) throw new UserError(`Run '${runId}' not found.`);
+    const t = findRun(reg.runs, runId, campaign);
     if (stage === "production") {
       issues = qaIssues(t.metrics);
       if (issues.length && !force) throw qaError(t.run_id, issues);
