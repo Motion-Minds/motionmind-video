@@ -9,7 +9,7 @@ import { parseArgs, type ParseArgsConfig } from "node:util";
 import * as runs from "../core/runs.ts";
 import { musicBed } from "../core/music.ts";
 import * as sfx from "../core/sfx.ts";
-import { doctor, installSkill, setupWorkspace } from "../core/setup.ts";
+import { doctor, installSkill, packageVersion, setupWorkspace } from "../core/setup.ts";
 import { isDir, parseCampaign, STAGES, Store, UserError, type Stage } from "../core/store.ts";
 
 const PACKAGE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -37,9 +37,9 @@ Track & view:
   motionmind import <folder> <brand>/<campaign> <version>
   motionmind edit <brand>/<campaign> [version] [--stop]                  HyperFrames Studio; no version = the tracked project
   motionmind render <brand>/<campaign> [version] [--crf 18]               no version = render the tracked project, then log it
-  motionmind promote <run_id> --stage production|staging|archived [--force]
+  motionmind promote <run_id> --stage production|staging|archived [--force] [--campaign <brand>/<campaign>]
   motionmind list [--campaign <brand>/<campaign>]
-  motionmind compare <run_a> <run_b>
+  motionmind compare <run_a> <run_b> [--campaign <brand>/<campaign>]   a version also works when only one campaign has it
   motionmind music --out <wav> --duration <s> [--bpm 120] [--seed 817]    original music bed (48 kHz stereo WAV, no samples)
            [--sections "0:groove,…"] [--bells "3.0,9.5"] [--duck 9.5:0.2]  sections: <bar>:<kind>, bar counted from 0 (not seconds);
                                                                           kind: tense|calm|groove|lift|outro
@@ -47,6 +47,7 @@ Track & view:
   motionmind sfx list [--category X] [--query Y] [--unlicensed]           library: ${"$"}MOTIONMIND_SFX, sfx_library, ~/.motionmind/sfx, bundled pack
   motionmind migrate                                                      convert an old hub (dashboard/registry.json) to store 3.0
   motionmind store                                                        print the store location
+  motionmind --version                                                    print the motionmind version
 
 QA: production (log --stage production, promote --stage production) requires −14 ±0.5 LUFS and true peak ≤ −1 dBFS
 when the video has audio; --force overrides and the override is written to LOG.md.`;
@@ -123,6 +124,10 @@ async function main(argv: string[]) {
     case "-h":
       console.log(HELP);
       return;
+    case "--version":
+    case "-v":
+      console.log(packageVersion());
+      return;
     case "store":
       console.log(store.root);
       return;
@@ -176,8 +181,9 @@ async function main(argv: string[]) {
       return print(await runs.renderRun(store, { campaign: need(positionals[0], "Campaign"), version: positionals[1], crf: Number(values.crf) }));
     }
     case "promote": {
-      const { values, positionals } = args(rest, { stage: { type: "string" }, force: { type: "boolean" } });
-      return print(runs.promote(store, need(positionals[0], "run_id"), need(stageOf(values.stage), "--stage"), values.force));
+      const { values, positionals } = args(rest, { stage: { type: "string" }, force: { type: "boolean" }, campaign: { type: "string" } });
+      const campaign = values.campaign === undefined ? undefined : parseCampaign(values.campaign).campaign;
+      return print(runs.promote(store, need(positionals[0], "run_id"), need(stageOf(values.stage), "--stage"), values.force, campaign));
     }
     case "list": {
       const { values } = args(rest, { campaign: { type: "string" } });
@@ -190,10 +196,10 @@ async function main(argv: string[]) {
       return;
     }
     case "compare": {
-      const { positionals } = args(rest, {});
+      const { values, positionals } = args(rest, { campaign: { type: "string" } });
+      const campaign = values.campaign === undefined ? undefined : parseCampaign(values.campaign).campaign;
       const reg = store.readRegistry().runs;
-      const find = (id: string) => reg.find((r) => r.run_id === id || r.version === id) ?? (() => { throw new UserError(`Run '${id}' not found.`); })();
-      const [a, b] = [find(need(positionals[0], "run_a")), find(need(positionals[1], "run_b"))];
+      const [a, b] = [runs.findRun(reg, need(positionals[0], "run_a"), campaign), runs.findRun(reg, need(positionals[1], "run_b"), campaign)];
       const keys = [...new Set([...Object.keys(a.params), ...Object.keys(b.params)])].map((k) => [`params.${k}`, a.params[k], b.params[k]] as const);
       const metrics = ["width", "height", "fps", "duration_s", "size_mb", "integrated_lufs", "true_peak_dbfs"].map((k) => [`metrics.${k}`, a.metrics[k], b.metrics[k]] as const);
       const rows = [["run_id", a.run_id, b.run_id] as const, ["stage", a.stage, b.stage] as const, ...keys, ...metrics];

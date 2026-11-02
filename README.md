@@ -256,7 +256,7 @@ needs the `motionmind` CLI on `PATH` for its commands.
 | `motionmind render b/c [version]` | render with the pinned CLI, make the contact sheet, measure, update the record |
 | `motionmind log <video> --campaign b/c [--param k=v] [--metric k=n] [--stage staging\|production\|archived] [--force]` | record any video as a version; stage defaults to `staging` |
 | `motionmind track <dir> --campaign b/c [--backfill]` · `untrack` · `tracked` · `watch [--once]` | autolog renders of a project you edit elsewhere |
-| `motionmind promote <run_id> --stage production\|staging\|archived [--force]` · `list` · `compare <a> <b>` | registry operations; production requires passing QA |
+| `motionmind promote <run_id> --stage production\|staging\|archived [--force] [--campaign b/c]` · `list` · `compare <a> <b> [--campaign b/c]` | registry operations; production requires passing QA |
 | `motionmind music --out x.wav --duration 15 --sections "0:tense,2:groove,5:outro"` | deterministic music bed; section numbers are bars (0-based), not seconds |
 | `motionmind sfx list [--query]` · `sfx scan` | SFX catalogue (built-in CC0 pack, or your library) |
 

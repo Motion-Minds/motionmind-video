@@ -12,7 +12,7 @@ const STAMP = ".motionmind-skill.json";
 
 export const skillSource = () => path.join(packageDir(), "skills", SKILL);
 
-function packageVersion(): string {
+export function packageVersion(): string {
   const pkg = path.join(packageDir(), "package.json");
   return isFile(pkg) ? JSON.parse(fs.readFileSync(pkg, "utf8")).version : "dev";
 }
