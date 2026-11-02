@@ -5,7 +5,7 @@ import path from "node:path";
 import { test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
-import { claimNextRunDir, importRun, logVideo } from "../core/runs.ts";
+import { claimNextRunDir, importRun, initRun, logVideo } from "../core/runs.ts";
 import { UserError } from "../core/store.ts";
 import { STUDIO, tempDir, tempStore } from "./helpers.ts";
 
@@ -37,6 +37,17 @@ test("log with a missing --src fails before anything is created", async (t) => {
   assert.deepEqual(store.readRegistry().runs, []);
 });
 
+test("log with an explicit version that already exists fails before the video is measured", async (t) => {
+  const store = tempStore(t);
+  const existing = store.runDir("demo/x", "v1-x");
+  fs.mkdirSync(existing, { recursive: true });
+  const video = path.join(tempDir(t), "clip.mp4");
+  fs.writeFileSync(video, "not a real video"); // would make ffprobe fail if it were measured first
+  await assert.rejects(logVideo(store, { campaign: "demo/x", video, version: "v1-x" }), (err) => err instanceof UserError && /already exists/.test(err.message));
+  await assert.rejects(logVideo(store, { campaign: "demo/x", video, version: "Bad" }), (err) => err instanceof UserError && /Version must look like/.test(err.message));
+  assert.deepEqual(runFolders(store, "demo/x"), ["v1-x"]);
+});
+
 test("an invalid version is refused before any folder is created", (t) => {
   const store = tempStore(t);
   assert.throws(() => claimNextRunDir(store, "demo/x", "Bad Slug"), (err) => err instanceof UserError && /Version must look like/.test(err.message));
@@ -64,15 +75,28 @@ test("importRun on an existing run folder is refused and the folder is kept", as
   assert.equal(fs.readFileSync(path.join(existing, "keep.txt"), "utf8"), "mine");
 });
 
-test("a failed import removes the run folder it created", async (t) => {
+test("a failed import removes the run folder it created and writes no campaign memory", async (t) => {
   const store = tempStore(t);
   const origin = tempDir(t);
   fs.writeFileSync(path.join(origin, "index.html"), '<div data-composition-id="main"></div>');
-  t.mock.method(fs, "cpSync", () => {
-    throw new Error("disk full");
-  });
-  await assert.rejects(importRun(store, { source: origin, campaign: "demo/x", version: "v1-x" }), /disk full/);
+  fs.writeFileSync(path.join(origin, "package.json"), "{ not json"); // copied fine, then pin() fails to parse it
+  await assert.rejects(importRun(store, { source: origin, campaign: "demo/x", version: "v1-x" }), SyntaxError);
   assert.deepEqual(runFolders(store, "demo/x"), []);
+  assert.ok(!fs.existsSync(path.join(store.campaignDir("demo/x"), "PROGRESS.md")));
+});
+
+test("a failed init removes the run folder it created and writes no campaign memory", { skip: process.platform === "win32" && "needs a POSIX fake npx" }, async (t) => {
+  const store = tempStore(t);
+  const bin = tempDir(t);
+  fs.writeFileSync(path.join(bin, "npx"), "#!/bin/sh\necho 'boom' >&2\nexit 1\n", { mode: 0o755 });
+  const pathBefore = process.env.PATH;
+  process.env.PATH = `${bin}${path.delimiter}${pathBefore}`;
+  t.after(() => {
+    process.env.PATH = pathBefore;
+  });
+  await assert.rejects(initRun(store, { campaign: "demo/x", version: "v1-x" }), (err) => err instanceof UserError && /hyperframes init failed/.test(err.message));
+  assert.deepEqual(runFolders(store, "demo/x"), []);
+  assert.ok(!fs.existsSync(path.join(store.campaignDir("demo/x"), "PROGRESS.md")));
 });
 
 test("parallel processes claiming auto versions get distinct numbers", async (t) => {
@@ -83,17 +107,7 @@ test("parallel processes claiming auto versions get distinct numbers", async (t)
     import { claimNextRunDir } from ${JSON.stringify(runs)};
     import { Store } from ${JSON.stringify(stores)};
     const store = new Store(${JSON.stringify(store.root)});
-    for (let i = 0; i < 10; i++) {
-      // withLock can still throw ENOENT when the holder releases mid-check (fixed separately); that is not what is tested here.
-      for (;;) {
-        try {
-          claimNextRunDir(store, "demo/x", "p" + process.pid + "-" + i);
-          break;
-        } catch (err) {
-          if (err.code !== "ENOENT") throw err;
-        }
-      }
-    }
+    for (let i = 0; i < 10; i++) claimNextRunDir(store, "demo/x", "p" + process.pid + "-" + i);
   `;
   await Promise.all(Array.from({ length: 4 }, () => execFileAsync(process.execPath, ["--input-type=module", "-e", script])));
   const folders = runFolders(store, "demo/x");

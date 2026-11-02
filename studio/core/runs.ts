@@ -101,10 +101,11 @@ export async function initRun(store: Store, opts: { campaign: string; version: s
   const src = path.join(runDir, "src");
   const created: string[] = [];
   try {
-    created.push(...ensureCampaignMemory(store, campaign, opts.version));
     await hf.init(runDir, resolution);
     created.push(`${store.rel(src)}/ (HyperFrames ${hf.HF_VERSION} project, ${resolution})`, ...seedBrandAssets(store, brand, src));
     created.push(breakdownStub(store, runDir, campaign, opts.version, `hyperframes ${hf.HF_VERSION}`));
+    // Last: PROGRESS.md names this version, so it is only written once the run exists for good.
+    created.unshift(...ensureCampaignMemory(store, campaign, opts.version));
   } catch (err) {
     fs.rmSync(runDir, { recursive: true, force: true });
     throw err;
@@ -130,12 +131,12 @@ export async function importRun(store: Store, opts: { source: string; campaign: 
   const created: string[] = [];
   let files = 0;
   try {
-    created.push(...ensureCampaignMemory(store, campaign, opts.version));
     hf.copyProject(origin, src);
     hf.pin(src);
     files = fs.readdirSync(src, { recursive: true }).filter((f) => isFile(path.join(src, String(f)))).length;
     created.push(`${store.rel(src)}/ (${files} files from ${origin}, hyperframes@${hf.versionOf(src)})`);
     created.push(breakdownStub(store, runDir, campaign, opts.version, `hyperframes ${hf.versionOf(src)} (import)`));
+    created.unshift(...ensureCampaignMemory(store, campaign, opts.version));
   } catch (err) {
     fs.rmSync(runDir, { recursive: true, force: true });
     throw err;
@@ -283,9 +284,11 @@ async function recordVideo(store: Store, opts: LogOptions, claim: { dir: string 
   if (!isFile(videoIn)) throw new UserError(`Video not found: ${videoIn}`);
   const stage = opts.stage ?? "staging";
   const campaignRuns = store.campaignDir(campaign) + path.sep + "runs" + path.sep;
-  // Checked before anything is probed or copied: a bad --src must not leave a run folder behind.
-  if (opts.src && !videoIn.startsWith(campaignRuns) && !isDir(path.resolve(expandHome(opts.src)))) {
-    throw new UserError(`Project folder not found: ${path.resolve(expandHome(opts.src))}`);
+  // Checked before anything is probed or copied: a bad --src or --version must not cost a full measurement or leave a
+  // run folder behind. The version is claimed for real (atomically) further down.
+  if (!videoIn.startsWith(campaignRuns)) {
+    if (opts.src && !isDir(path.resolve(expandHome(opts.src)))) throw new UserError(`Project folder not found: ${path.resolve(expandHome(opts.src))}`);
+    if (opts.version) newRunDir(store, campaign, opts.version);
   }
   // Measured before anything is copied, so a production log that fails QA leaves nothing behind.
   const metrics = await probe(videoIn);
