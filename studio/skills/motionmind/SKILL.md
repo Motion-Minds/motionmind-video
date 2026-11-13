@@ -30,7 +30,7 @@ Stop and wait for the user at each gate. Skip a gate only when the user says so 
 | 2 | Concepts | 2–3 genuinely different story ideas in words, in `plan/concepts.md` | **Gate 1**: user picks one |
 | 3 | Storyboard + style | Per-second table in `plan/storyboard.md`; palette, type, motion, sound locked in `TASTE.md` | **Gate 2**: user approves |
 | 4 | Build | `motionmind init`, one scene per file, `check` + `snapshot` after every change, look at the frames | — |
-| 5 | Review | Render a draft, ask the user to watch in Studio or edit in HyperFrames Studio (`motionmind edit`) | **Gate 3** |
+| 5 | Review | Render a draft, ask the user to watch and comment in Studio (run page → Review) or edit in HyperFrames Studio (`motionmind edit`); read their notes with `motionmind review` | **Gate 3** |
 | 6 | Render + QA | `motionmind render`, check against `references/qa.md`, fix, re-render | — |
 | 7 | Record | `breakdown.md`, `PROGRESS.md`, `LOG.md`, `motionmind log … --stage staging`; promote after approval | **Gate 4** |
 
@@ -44,7 +44,10 @@ motionmind edit <brand>/<campaign> v<N>-<slug> [--stop]     # HyperFrames Studio
 motionmind render <brand>/<campaign> v<N>-<slug>            # video.mp4 + contact-sheet.png, updates a logged staging run; production/archived are frozen
 motionmind log projects/<brand>/<campaign>/runs/<v>/video.mp4 --campaign <brand>/<campaign> \
   --stage staging --title "…" --param concept_name="…" --param hook_copy="…" --param cta_copy="…"
+motionmind log projects/<brand>/<campaign>/runs/<v> --campaign <brand>/<campaign> --title "…"   # image deliverable (carousel, cover): same stages, no loudness QA
 motionmind promote <run_id> --stage production             # refused while QA fails; --force only on the user's explicit say-so
+motionmind review <brand>/<campaign> <version>              # reviewer verdict + comments with video times (open first)
+motionmind review <brand>/<campaign> <version> --resolve 3   # after the fix is in the new version; never --approve for the user
 motionmind music --out src/assets/audio/music.wav --duration 15 --bpm 120 --sections "0:tense,2:groove,5:outro"  # bars, not seconds
 motionmind sfx list [--query click]                         # licensed sound catalogue; copy what you use into the run
 motionmind list · motionmind compare <a> <b>

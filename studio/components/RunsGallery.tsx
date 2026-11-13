@@ -21,6 +21,8 @@ export interface RunCard {
   lufs: number | null;
   /** Loudness QA violations of a logged video (`qaIssues`); empty when it passes or has no measurements. */
   qaIssues: string[];
+  /** Review verdict (runs/<v>/review.json) and how many comments are still open. */
+  review: { status: "approved" | "changes_requested" | null; open: number };
 }
 
 const STATUS_FILTERS: { id: string; label: string }[] = [
@@ -28,11 +30,10 @@ const STATUS_FILTERS: { id: string; label: string }[] = [
   { id: "staging", label: "Staging" },
   { id: "archived", label: "Archived" },
   { id: "unlogged", label: "Not logged" },
-  { id: "image", label: "Images" },
 ];
 
-/** Image deliverables are never logged to the registry, so they form their own status bucket. */
-const bucket = (r: RunCard) => (r.kind === "image" ? "image" : (r.stage ?? "unlogged"));
+/** Videos and image deliverables share the stages; anything not in the registry yet is "not logged". */
+const bucket = (r: RunCard) => r.stage ?? "unlogged";
 
 export function RunsGallery({ runs }: { runs: RunCard[] }) {
   const [project, setProject] = useState("all");
@@ -94,12 +95,21 @@ export function RunsGallery({ runs }: { runs: RunCard[] }) {
                   <span className="muted small">no output yet</span>
                 )}
                 <div className="thumb-top">
-                  {r.kind === "image" ? <span className="pill">image</span> : <StagePill stage={r.stage} />}
-                  {r.qaIssues.length > 0 && (
-                    <span className="pill stage-staging" title={r.qaIssues.join("\n")}>
-                      QA ✗
-                    </span>
-                  )}
+                  {r.kind === "image" && !r.stage ? <span className="pill">image</span> : <StagePill stage={r.stage} />}
+                  <span className="thumb-flags">
+                    {r.qaIssues.length > 0 && (
+                      <span className="pill stage-staging" title={r.qaIssues.join("\n")}>
+                        QA ✗
+                      </span>
+                    )}
+                    {r.review.status === "approved" ? (
+                      <span className="pill stage-production">✓ approved</span>
+                    ) : r.review.status === "changes_requested" ? (
+                      <span className="pill stage-staging">changes{r.review.open ? ` · ${r.review.open}` : ""}</span>
+                    ) : r.review.open > 0 ? (
+                      <span className="pill">{r.review.open} comment{r.review.open === 1 ? "" : "s"}</span>
+                    ) : null}
+                  </span>
                 </div>
               </div>
               <div className="run-body">

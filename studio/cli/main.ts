@@ -8,10 +8,11 @@ import { fileURLToPath } from "node:url";
 import { parseArgs, type ParseArgsConfig } from "node:util";
 import { isLoopback } from "../core/host.ts";
 import * as runs from "../core/runs.ts";
+import * as review from "../core/review.ts";
 import { musicBed } from "../core/music.ts";
 import * as sfx from "../core/sfx.ts";
 import { doctor, installSkill, packageVersion, setupWorkspace } from "../core/setup.ts";
-import { isDir, parseCampaign, STAGES, Store, UserError, type Stage } from "../core/store.ts";
+import { expandHome, isDir, parseCampaign, STAGES, Store, UserError, type Stage } from "../core/store.ts";
 
 const PACKAGE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 process.env.MOTIONMIND_PACKAGE_DIR ??= PACKAGE_DIR;
@@ -34,11 +35,17 @@ Track & view:
   motionmind log <video> --campaign <brand>/<campaign> [--version v<N>-<slug>] [--src <folder>] [--title …]
            [--stage staging|production|archived] [--force] [--param k=v]… [--metric k=n]… [--notes …] [--run-id …]
            [--sheet …] [--breakdown …] [--design …]                       stage defaults to staging
+  motionmind log <image|folder> --campaign <brand>/<campaign> [--version …] [--title …] [--stage …] [--param k=v]… [--notes …]
+                                                                          image deliverable (carousel, cover): a run folder of
+                                                                          the campaign is logged in place, other folders are copied
   motionmind init <brand>/<campaign> <version> [--resolution portrait|landscape|square]   new version: HyperFrames project in the store
   motionmind import <folder> <brand>/<campaign> <version>
   motionmind edit <brand>/<campaign> [version] [--stop]                  HyperFrames Studio; no version = the tracked project
   motionmind render <brand>/<campaign> [version] [--crf 18] [--force]     no version = render the tracked project, then log it; production/archived need --force
   motionmind promote <run_id> --stage production|staging|archived [--force] [--campaign <brand>/<campaign>]
+  motionmind review <brand>/<campaign> <version>                        print the version's review: verdict + comments (open first)
+           [--comment "…" [--at <seconds>]] [--resolve <id>] [--reopen <id>]
+           [--approve | --request-changes] [--note "…"] [--by <name>]  --by defaults to "agent"; reviewers use the Studio run page
   motionmind list [--campaign <brand>/<campaign>]
   motionmind compare <run_a> <run_b> [--campaign <brand>/<campaign>]   a version also works when only one campaign has it
   motionmind music --out <wav> --duration <s> [--bpm 120] [--seed 817]    original music bed (48 kHz stereo WAV, no samples)
@@ -163,8 +170,18 @@ async function main(argv: string[]) {
         "run-id": { type: "string" }, param: { type: "string", multiple: true }, metric: { type: "string", multiple: true }, notes: { type: "string" },
         sheet: { type: "string" }, breakdown: { type: "string" }, design: { type: "string" }, force: { type: "boolean" },
       });
+      const target = need(positionals[0], "Video, image or image folder");
+      const abs = path.resolve(store.root, expandHome(target));
+      if (isDir(abs) || runs.isImageDeliverable(path.basename(abs))) {
+        const unused = (["src", "sheet", "design", "breakdown", "metric", "force"] as const).filter((k) => values[k] !== undefined);
+        if (unused.length) throw new UserError(`${unused.map((k) => `--${k}`).join(", ")} only apply to videos.`);
+        return print(await runs.logImages(store, {
+          campaign: need(values.campaign, "--campaign"), source: target, version: values.version, title: values.title, stage: stageOf(values.stage),
+          runId: values["run-id"], params: keyValues(values.param, false), notes: values.notes,
+        }));
+      }
       return print(await runs.logVideo(store, {
-        campaign: need(values.campaign, "--campaign"), video: need(positionals[0], "Video file"), version: values.version, src: values.src,
+        campaign: need(values.campaign, "--campaign"), video: target, version: values.version, src: values.src,
         title: values.title, stage: stageOf(values.stage), runId: values["run-id"], params: keyValues(values.param, false),
         metrics: keyValues(values.metric, true) as Record<string, number>, notes: values.notes, sheet: values.sheet, breakdown: values.breakdown, design: values.design,
         force: values.force,
@@ -201,6 +218,24 @@ async function main(argv: string[]) {
         console.log(`${r.run_id.padEnd(34)} ${r.version.padEnd(26)} ${r.stage.padEnd(11)} ${res.padEnd(10)} ${String(r.metrics.integrated_lufs ?? "—").padEnd(7)} ${r.source?.kind ?? "hub"}`);
       }
       return;
+    }
+    case "review": {
+      const { values, positionals } = args(rest, {
+        comment: { type: "string" }, at: { type: "string" }, resolve: { type: "string" }, reopen: { type: "string" },
+        approve: { type: "boolean" }, "request-changes": { type: "boolean" }, note: { type: "string" }, by: { type: "string" },
+      });
+      const t = { campaign: parseCampaign(need(positionals[0], "Campaign")).campaign, version: need(positionals[1], "Version") };
+      const by = values.by ?? "agent";
+      const id = (v: string) => (/^\d+$/.test(v) ? Number(v) : (() => { throw new UserError(`Comment id must be a number, got '${v}'.`); })());
+      if (values.approve && values["request-changes"]) throw new UserError("Use either --approve or --request-changes.");
+      if (values.at !== undefined && values.comment === undefined) throw new UserError("--at belongs to --comment.");
+      if (values.comment !== undefined) review.addComment(store, { ...t, text: values.comment, atS: values.at === undefined ? null : Number(values.at), by });
+      if (values.resolve !== undefined) review.resolveComment(store, { ...t, id: id(values.resolve) });
+      if (values.reopen !== undefined) review.resolveComment(store, { ...t, id: id(values.reopen), reopen: true });
+      if (values.approve || values["request-changes"]) {
+        review.setVerdict(store, { ...t, status: values.approve ? "approved" : "changes_requested", note: values.note, by });
+      } else if (values.note !== undefined) throw new UserError("--note belongs to --approve or --request-changes.");
+      return print({ lines: review.formatReview(t, review.readReview(store, t)) });
     }
     case "compare": {
       const { values, positionals } = args(rest, { campaign: { type: "string" } });

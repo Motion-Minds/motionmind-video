@@ -1,8 +1,19 @@
 {
   "name": "motionmind",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Make videos with your AI coding agent (HyperFrames) and track every version: agent skill, CLI and a local studio — MLflow-style.",
-  "keywords": ["video", "motion-graphics", "hyperframes", "ai-agent", "agent-skills", "claude-code", "codex", "mlflow", "gsap", "cli"],
+  "keywords": [
+    "video",
+    "motion-graphics",
+    "hyperframes",
+    "ai-agent",
+    "agent-skills",
+    "claude-code",
+    "codex",
+    "mlflow",
+    "gsap",
+    "cli"
+  ],
   "author": "Vinzzztty",
   "homepage": "https://github.com/Motion-Minds/motionmind-video#readme",
   "repository": {

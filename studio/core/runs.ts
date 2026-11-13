@@ -1,8 +1,9 @@
 // Run operations shared by the `motionmind` CLI and the Studio: create, snapshot, log, render, edit, promote, track.
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import * as hf from "./hyperframes.ts";
-import { aspectOf, contactSheet, probe, sha256 } from "./media.ts";
+import { aspectOf, contactSheet, probe, probeImage, sha256 } from "./media.ts";
 import { qaIssues } from "./qa.ts";
 import {
   defaultRunId, expandHome, isDir, isFile, listDirs, nextVersionNumber, packageDir, parseCampaign, stamp, Store, VERSION, UserError,
@@ -396,10 +397,140 @@ async function recordVideo(store: Store, opts: LogOptions, claim: { dir: string 
   };
 }
 
-/** One production version per aspect ratio per campaign: the previous one moves to archived. */
+// ---------------------------------------------------------------------------------------------
+// Image deliverables (carousels, covers, thumbnails): logged like videos, minus the loudness QA
+// ---------------------------------------------------------------------------------------------
+
+const IMAGE_FILE = /\.(png|jpe?g|webp)$/i;
+const SHEET_FILE = /contact[-_ ]?sheet/i;
+/** A file that counts as part of an image deliverable (contact sheets are previews, not deliverables). */
+export const isImageDeliverable = (name: string) => IMAGE_FILE.test(name) && !SHEET_FILE.test(name);
+
+const ASPECTS: [string, number][] = [["9:16", 9 / 16], ["2:3", 2 / 3], ["4:5", 4 / 5], ["3:4", 3 / 4], ["1:1", 1], ["4:3", 4 / 3], ["3:2", 3 / 2], ["1.91:1", 1.91], ["16:9", 16 / 9]];
+/** Named ratio within 2 % (1080×1350 → 4:5), else the ratio to 1 with two decimals (2400×1000 → 2.4:1, 600×1000 → 1:1.67). */
+export function imageAspect(width: number, height: number): string {
+  const r = width / height;
+  const named = ASPECTS.find(([, v]) => Math.abs(r / v - 1) < 0.02);
+  if (named) return named[0];
+  const two = (n: number) => String(Math.round(n * 100) / 100);
+  return r >= 1 ? `${two(r)}:1` : `1:${two(1 / r)}`;
+}
+
+const imagesIn = (dir: string) => fs.readdirSync(dir).filter((n) => !n.startsWith(".") && isImageDeliverable(n) && isFile(path.join(dir, n))).sort();
+
+export interface LogImagesOptions {
+  campaign: string;
+  /** A run folder of this campaign (logged in place), another folder (its top-level images are copied), or one image. */
+  source: string;
+  version?: string;
+  title?: string;
+  stage?: Stage;
+  runId?: string;
+  params?: Record<string, unknown>;
+  notes?: string;
+}
+
+/** Log an image deliverable as a run: same registry, stages and promote rules as video; no loudness QA. */
+export async function logImages(store: Store, opts: LogImagesOptions): Promise<Result> {
+  const claim: { dir: string | null } = { dir: null };
+  try {
+    return await recordImages(store, opts, claim);
+  } catch (err) {
+    if (claim.dir) fs.rmSync(claim.dir, { recursive: true, force: true });
+    throw err;
+  }
+}
+
+async function recordImages(store: Store, opts: LogImagesOptions, claim: { dir: string | null }): Promise<Result> {
+  const { campaign } = parseCampaign(opts.campaign);
+  const src = path.resolve(store.root, expandHome(opts.source));
+  const stage = opts.stage ?? "staging";
+  const campaignRuns = store.campaignDir(campaign) + path.sep + "runs" + path.sep;
+  const inPlace = isDir(src) && src.startsWith(campaignRuns) && !src.slice(campaignRuns.length).includes(path.sep);
+  let files: string[];
+  if (isDir(src)) {
+    if (fs.readdirSync(src).some((n) => /\.mp4$/i.test(n))) throw new UserError(`${src} contains a video; log the .mp4 file instead.`);
+    files = imagesIn(src).map((n) => path.join(src, n));
+  } else if (isFile(src) && isImageDeliverable(path.basename(src))) files = [src];
+  else throw new UserError(`Not an image or a folder: ${src}`);
+  if (!files.length) throw new UserError(`No .png/.jpg/.webp images in ${src} (contact sheets do not count).`);
+  // Measured before anything is copied: an unreadable image leaves no run folder behind.
+  const sizes = await Promise.all(files.map(probeImage));
+  store.ensure();
+
+  let runDir: string;
+  let version: string;
+  if (inPlace) {
+    version = path.basename(src);
+    if (opts.version && opts.version !== version) throw new UserError(`The images are in run ${version}, not ${opts.version}.`);
+    runDir = src;
+  } else {
+    if (src.startsWith(store.path("projects") + path.sep)) throw new UserError(`'${src}' belongs to another campaign or is not a run folder; log it from its own campaign.`);
+    const mtime = fs.statSync(src).mtime;
+    ({ version, runDir } = opts.version ? { version: opts.version, runDir: claimRunDir(store, campaign, opts.version) } : claimNextRunDir(store, campaign, `images-${slugTime(mtime)}`));
+    claim.dir = runDir;
+    files = files.map((f) => {
+      const dest = path.join(runDir, path.basename(f));
+      fs.copyFileSync(f, dest, fs.constants.COPYFILE_FICLONE);
+      return dest;
+    });
+  }
+
+  // The deliverable's format is the most common ratio, so a wide preview strip next to 4:5 slides does not set it.
+  const aspects = sizes.map((s) => imageAspect(s.width, s.height));
+  const count = (a: string) => aspects.filter((x) => x === a).length;
+  const aspect = aspects.reduce((best, a) => (count(a) > count(best) ? a : best), aspects[0]);
+  const first = sizes[aspects.indexOf(aspect)];
+  const mixed = aspects.some((a) => a !== aspect);
+  const runRel = store.rel(runDir);
+  const perFile = await Promise.all(files.map(sha256));
+  const entry: Omit<RegistryRun, "run_id"> = {
+    project: campaign,
+    version,
+    run_dir: runRel,
+    stage,
+    created_at: stamp(),
+    title: opts.title || `${campaign} — ${version}`,
+    params: { skill_engine: "image", engine: "image", aspect, ...(mixed ? { mixed_sizes: true } : {}), ...opts.params },
+    artifacts: {
+      images: files.map((f) => store.rel(f)),
+      breakdown: toRel(store, path.join(runDir, "breakdown.md")),
+      design_board: toRel(store, path.join(store.campaignDir(campaign), "plan", "design.html")),
+    },
+    metrics: {
+      width: first.width,
+      height: first.height,
+      images: files.length,
+      size_mb: Math.round(files.reduce((n, f) => n + fs.statSync(f).size, 0) / 10485.76) / 100,
+    },
+    hashes: { images_sha256: createHash("sha256").update(perFile.join("\n")).digest("hex") },
+    source: inPlace ? { kind: "hub" } : { kind: "file", dir: isDir(src) ? src : null, file: isDir(src) ? null : src },
+    notes: opts.notes ?? "",
+  };
+
+  const runId = store.updateRegistry((reg) => {
+    const id = opts.runId ?? reg.runs.find((r) => r.run_dir === runRel)?.run_id ?? uniqueRunId(reg.runs, campaign, version, runRel);
+    const clash = reg.runs.find((r) => r.run_id === id && r.run_dir !== runRel);
+    if (clash) throw new UserError(`run_id '${id}' is already used by ${clash.project} ${clash.version}; pass another --run-id.`);
+    const run: RegistryRun = { run_id: id, ...entry };
+    if (stage === "production") demoteOthers(reg.runs, run);
+    reg.runs = [...reg.runs.filter((r) => r.run_id !== id && r.run_dir !== runRel), run];
+    return id;
+  });
+  claim.dir = null;
+  const spec = `${files.length} image${files.length === 1 ? "" : "s"} · ${first.width}x${first.height} (${aspect}${mixed ? ", mixed sizes" : ""})`;
+  store.appendLog(campaign, `log ${version} · ${runId} (${stage}) · ${spec}`);
+  return { lines: [`Run '${runId}' (${stage}) · ${runRel} · ${spec}`], href: `/r/${campaign}/${version}`, runId };
+}
+
+const kindOf = (r: RegistryRun) => (r.params.engine === "image" ? "image" : "video");
+
+/** One production version per output kind (video / images) and aspect ratio per campaign: the previous one moves to archived. */
 function demoteOthers(runs: RegistryRun[], target: RegistryRun) {
   for (const r of runs) {
-    if (r.project === target.project && r.params.aspect === target.params.aspect && r.run_id !== target.run_id && r.stage === "production") r.stage = "archived";
+    if (r.project === target.project && kindOf(r) === kindOf(target) && r.params.aspect === target.params.aspect && r.run_id !== target.run_id && r.stage === "production") {
+      r.stage = "archived";
+    }
   }
 }
 

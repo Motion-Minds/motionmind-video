@@ -18,7 +18,7 @@ studio that works like MLflow for renders.
 
 <sub>30-second walkthrough · <a href="https://github.com/Motion-Minds/motionmind-video/blob/main/docs/gallery/walkthrough.mp4">MP4 with sound (0.8 MB)</a> · made with MotionMind itself</sub>
 
-[What you get](#what-you-get) · [Quick start](#quick-start) · [Workflow](#workflow) · [Example prompts](#example-prompts) · [Studio](#the-studio) · [Install](#install) · [FAQ](#faq)
+[What you get](#what-you-get) · [Quick start](#quick-start) · [Step by step](#step-by-step) · [Workflow](#workflow) · [Example prompts](#example-prompts) · [Studio](#the-studio) · [Install](#install) · [FAQ](#faq)
 
 </div>
 
@@ -36,16 +36,18 @@ MotionMind gives the agent a **production process** and gives you a **record of 
   render, with you approving each gate;
 - a CLI that turns every render into a frozen, measured **version** (video, contact sheet, source snapshot, loudness,
   parameters, checksum);
-- a local **Studio** where you watch, compare side by side, edit in HyperFrames Studio without code, and promote a
-  version to production.
+- a local **Studio** where you watch, compare side by side, leave time-stamped review comments, edit in HyperFrames
+  Studio without code, and promote a version to production — videos and image deliverables alike.
 
 ## What you get
 
 | | Part | What it does |
 |---|---|---|
 | 🧠 | **`motionmind` skill** | Four-gate workflow, HyperFrames rules, motion and sound guidance, QA checklist, screen-demo kit. Works with any agent that reads `SKILL.md`. |
-| ⌨️ | **`motionmind` CLI** | `setup`, `init`, `render`, `log`, `promote`, `track`, `compare`, `music`, `sfx`, `doctor`. The agent calls it; you can too. |
-| 🖥️ | **Studio** (`motionmind ui`) | Dashboard at `127.0.0.1:4310`: every version with player, 4:5 safe-area overlay, contact sheet, LUFS and QA status, parameters, stages, compare, docs. |
+| ⌨️ | **`motionmind` CLI** | `setup`, `init`, `render`, `log`, `promote`, `review`, `track`, `compare`, `music`, `sfx`, `doctor`. The agent calls it; you can too. |
+| 🖥️ | **Studio** (`motionmind ui`) | Dashboard at `127.0.0.1:4310`: every version with player, 4:5 safe-area overlay, contact sheet, LUFS and QA status, parameters, stages, review comments and verdicts, compare, docs. |
+| 💬 | **Review** | Comments pinned to a moment in the video, resolve, **Approve / Request changes**; stored next to the version and read by the agent with `motionmind review`. |
+| 🖼️ | **Image deliverables** | Carousels, covers and thumbnails are versions too: `motionmind log <folder>` records count, size, aspect ratio and checksum, with the same stages and promote. |
 | 🎵 | **Music bed** | `motionmind music`: deterministic, sample-free 120 BPM beds with sections (tense, calm, groove, lift, outro), bells and ducking. |
 | 🔊 | **Starter SFX** | 22 CC0 sounds (clicks, pops, chimes, whooshes, risers, impacts) built in; plug in your own library any time. |
 | 📡 | **Tracking** | Already working in HyperFrames Studio or another editor? `motionmind track` logs every render or export as a version. |
@@ -92,6 +94,42 @@ $ claude            # or codex, gemini, opencode …
 
 Expect a few rounds of conversation, not a one-shot: the agent stops at each gate and waits for you.
 
+## Step by step
+
+Real recordings of MotionMind 0.3.1 on the *Demo Coffee* brand that ships in `shared/brands/demo/`: two versions made
+with the agent already exist (`v1-steam` in production, `v2-first-sip` in staging), and an editor has exported a new
+cut. Every step below is a plain CLI command or a Studio click; your agent runs the same commands.
+
+**1. Create a workspace and check the machine.** `setup` makes the store and installs the skill; `doctor` checks
+Node, ffmpeg, HyperFrames with its Chrome, and your agent CLIs.
+
+<img src="https://raw.githubusercontent.com/Motion-Minds/motionmind-video/main/docs/gallery/steps/1-setup.gif" alt="motionmind setup and motionmind doctor in a terminal" width="100%">
+
+**2. Log a video, with QA.** Any `.mp4` becomes a measured version. The draft at −23.7 LUFS is refused for
+production; the mixed cut is logged as `v3-ready-by-7` in staging (the default).
+
+<img src="https://raw.githubusercontent.com/Motion-Minds/motionmind-video/main/docs/gallery/steps/2-log.gif" alt="motionmind log refusing a quiet draft for production, then logging the final cut as staging" width="100%">
+
+**3. Promote.** `v3` goes live; the previous production version of the same aspect ratio is archived, and both
+steps are written to the campaign's `LOG.md`.
+
+<img src="https://raw.githubusercontent.com/Motion-Minds/motionmind-video/main/docs/gallery/steps/3-promote.gif" alt="motionmind promote to production, list shows v1 archived, LOG.md shows the promotion" width="100%">
+
+**4. Track an editor's export folder.** After `track`, every new `.mp4` there becomes a version by itself while
+`motionmind ui` or `motionmind watch` runs (`watch --once` here for a single pass).
+
+<img src="https://raw.githubusercontent.com/Motion-Minds/motionmind-video/main/docs/gallery/steps/4-track.gif" alt="motionmind track an export folder, a new file is autologged as a staging version" width="100%">
+
+**5. Review in the Studio.** `motionmind ui`, then open a version: player, QA status, loudness, the 4:5 safe-area
+overlay, stage.
+
+<img src="https://raw.githubusercontent.com/Motion-Minds/motionmind-video/main/docs/gallery/steps/5-studio.gif" alt="MotionMind Studio: all runs, then a run page with QA pill, loudness and the 4:5 safe-zone overlay while the video plays" width="100%">
+
+**6. Compare.** The run's **Compare** button opens it next to its previous version, picked automatically; play both
+in sync and read what changed.
+
+<img src="https://raw.githubusercontent.com/Motion-Minds/motionmind-video/main/docs/gallery/steps/6-compare.gif" alt="Compare page: B is suggested as the version before A, both videos play in sync, the diff table highlights changes" width="100%">
+
 ## Workflow
 
 ```mermaid
@@ -116,8 +154,10 @@ flowchart LR
    easing, music) so later versions look and move the same.
 4. **Let it build.** `motionmind init` creates the version folder; the agent writes one scene per file, runs
    HyperFrames `check` and `snapshot` after every change, and looks at the frames.
-5. **Review.** Watch the draft in the Studio, or press **Edit in HyperFrames** to change text, timing or audio without
-   code. While you edit, the version is locked for the agent.
+5. **Review.** Watch the draft in the Studio and leave comments at the exact second (or for the whole version), then
+   **Approve** or **Request changes**; the agent reads them with `motionmind review` and fixes them in the next version.
+   Or press **Edit in HyperFrames** to change text, timing or audio without code; while you edit, the version is
+   locked for the agent.
 6. **Promote.** After QA (−14 LUFS ±0.5, true peak ≤ −1 dBFS, 9:16 safe area, CTA held), you move it to production;
    the previous production version of the same aspect ratio is archived, never deleted. The loudness rules are
    enforced: a version that misses them is refused for production unless you override it (`--force`, or the checkbox
@@ -163,10 +203,16 @@ Revise acme/launch-15s v2: the CTA is too small and the second scene is rushed. 
 <td width="50%"><img src="https://raw.githubusercontent.com/Motion-Minds/motionmind-video/main/docs/gallery/studio-compare.jpg" alt="Two versions side by side"><br><b>Compare</b><br><sub>Two versions played in sync, with a table of what changed: parameters, loudness, size. Pick A and B is suggested (its previous version); runs are listed by campaign, newest logged first.</sub></td>
 </tr>
 <tr>
-<td><img src="https://raw.githubusercontent.com/Motion-Minds/motionmind-video/main/docs/gallery/studio-run.jpg" alt="One run with player and registry"><br><b>Run page</b><br><sub>Player with 4:5 safe-area overlay, contact sheet, breakdown, parameters, stage, Edit in HyperFrames, Render.</sub></td>
+<td><img src="https://raw.githubusercontent.com/Motion-Minds/motionmind-video/main/docs/gallery/studio-run.jpg" alt="One run with player and registry"><br><b>Run page</b><br><sub>Player with 4:5 safe-area overlay, contact sheet, breakdown, parameters, stage, Edit in HyperFrames, Render, and a Review panel: comments at a video time (click to jump), resolve, Approve / Request changes.</sub></td>
 <td><img src="https://raw.githubusercontent.com/Motion-Minds/motionmind-video/main/docs/gallery/studio-docs.jpg" alt="Skill documentation inside the Studio"><br><b>Docs</b><br><sub>The skill and its references, readable by you exactly as the agent reads them. Plus a Starter kit that turns a brief into a prompt.</sub></td>
 </tr>
 </table>
+
+**Images.** Runs without an `.mp4` that hold `.png`/`.jpg`/`.webp` files (carousels, covers, thumbnails) have their
+own page. Log one with `motionmind log <run folder or export folder> --campaign b/c` or the form on its run page and it
+gets a stage like a video: the format is the most common aspect ratio among its files (4:5, 1.91:1, …), there is no
+loudness gate, and promoting images archives only the previous production images of that ratio — never the
+campaign's video.
 
 ### MotionMind, the MLflow way
 
@@ -177,7 +223,8 @@ Revise acme/launch-15s v2: the CTA is too small and the second scene is rushed. 
 | run · params · metrics · artifacts | version `v<N>-<slug>` · composition, variables, CLI version · LUFS, true peak, duration, render time · `video.mp4`, contact sheet, `src/` snapshot |
 | `mlflow.autolog()` | `motionmind track` + `motionmind ui` / `watch`: every render in a tracked project is logged |
 | `mlflow.log_*` | `motionmind log <video> --param k=v --metric k=n` |
-| model registry stages | `staging` (default) → `production` → `archived`, one production version per aspect ratio; production requires passing QA |
+| model registry stages | `staging` (default) → `production` → `archived`, one production version per output kind (video / images) and aspect ratio; video production requires passing QA |
+| — | `motionmind review`: reviewer comments with a video time and an approve / request-changes verdict per version |
 | `mlflow ui` | `motionmind ui` |
 
 ### Already working in HyperFrames Studio or another editor?
@@ -190,6 +237,7 @@ motionmind track ~/Exports/premiere --campaign acme/launch-15s-cut          # an
 motionmind log ./final.mp4 --campaign acme/launch-15s --param hook="Stock running low?"
 motionmind compare acme-launch-15s-v1 acme-launch-15s-v2
 motionmind promote acme-launch-15s-v2 --stage production
+motionmind review acme/launch-15s v2-calmer   # comments + verdict left in the Studio, for your agent
 ```
 
 ## Install
@@ -231,6 +279,19 @@ needs the `motionmind` CLI on `PATH` for its commands.
 > Install **one copy** per scope. `motionmind skill install` refuses to overwrite a folder it did not create unless
 > you pass `--force`.
 
+### The workflow skill: motionmind-use
+
+[**motionmind-use**](https://github.com/Motion-Minds/motionmind-use) is a second, separate skill about the record
+rather than the video: the store, versions, registry, stages, QA gate, frozen versions, autolog and compare, so the
+agent can answer *"which command, and why was it refused?"*. Any agent, any OS:
+
+```bash
+npx skills add Motion-Minds/motionmind-use -g
+```
+
+The [motionmind-use README](https://github.com/Motion-Minds/motionmind-use#install) also has a curl / PowerShell
+one-liner and the Claude Code plugin route.
+
 ## Requirements
 
 | To… | You need |
@@ -255,8 +316,10 @@ needs the `motionmind` CLI on `PATH` for its commands.
 | `motionmind edit b/c [version] [--stop]` | open HyperFrames Studio on a version (or the tracked project); locks it for agents |
 | `motionmind render b/c [version] [--force]` | render with the pinned CLI, make the contact sheet, measure, update the record; production/archived versions need `--force` |
 | `motionmind log <video> --campaign b/c [--param k=v] [--metric k=n] [--stage staging\|production\|archived] [--force]` | record any video as a version; stage defaults to `staging` |
+| `motionmind log <image\|folder> --campaign b/c [--title …] [--stage …]` | record an image deliverable (carousel, cover, thumbnail) as a version: a run folder is logged in place, other folders are copied; same stages and promote, no loudness QA |
 | `motionmind track <dir> --campaign b/c [--backfill]` · `untrack` · `tracked` · `watch [--once]` | autolog renders of a project you edit elsewhere |
 | `motionmind promote <run_id> --stage production\|staging\|archived [--force] [--campaign b/c]` · `list` · `compare <a> <b> [--campaign b/c]` | registry operations; production requires passing QA |
+| `motionmind review b/c <version> [--comment "…" --at <s>] [--resolve <id>] [--approve\|--request-changes --note "…"]` | the version's review: comments pinned to a video time and a verdict, also left from the Studio run page |
 | `motionmind music --out x.wav --duration 15 --sections "0:tense,2:groove,5:outro"` | deterministic music bed; section numbers are bars (0-based), not seconds |
 | `motionmind sfx list [--query]` · `sfx scan` | SFX catalogue (built-in CC0 pack, or your library) |
 

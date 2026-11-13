@@ -47,7 +47,10 @@ export interface RegistryRun {
     fonts?: string[];
     color_logic?: string;
   };
-  artifacts: Partial<Record<"html" | "mp4" | "contact_sheet" | "design_board" | "breakdown" | "src", string | null>>;
+  artifacts: Partial<Record<"html" | "mp4" | "contact_sheet" | "design_board" | "breakdown" | "src", string | null>> & {
+    /** Image deliverable: the run's image files in display order (store-relative). */
+    images?: string[];
+  };
   metrics: Record<string, unknown> & {
     width?: number;
     height?: number;
@@ -58,7 +61,8 @@ export interface RegistryRun {
     integrated_lufs?: number | null;
     true_peak_dbfs?: number | null;
   };
-  hashes?: { mp4_sha256?: string | null; html_sha256?: string | null };
+  /** images_sha256: SHA-256 over the per-file hashes of an image deliverable, in file-name order. */
+  hashes?: { mp4_sha256?: string | null; html_sha256?: string | null; images_sha256?: string | null };
   source?: RunSource;
   notes?: string;
 }

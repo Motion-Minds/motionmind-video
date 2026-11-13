@@ -12,15 +12,15 @@ export default function AllRunsPage() {
       title="All runs"
       lead={
         <>
-          Every version in this store&rsquo;s <code>projects/*/*/runs/</code>, video and images. Stages and video metrics come from <code>registry.json</code>{" "}
+          Every version in this store&rsquo;s <code>projects/*/*/runs/</code>, video and images. Stages and metrics come from <code>registry.json</code>{" "}
           (<code>motionmind log</code>, autolog of tracked projects, or the form on a run page).
         </>
       }
       kpis={[
         { label: "Video", value: videos.length },
         { label: "Images", value: runs.filter((r) => r.kind === "image").length },
-        { label: "Production", value: videos.filter((r) => r.registry?.stage === "production").length },
-        { label: "Unlogged videos", value: videos.filter((r) => !r.registry).length },
+        { label: "Production", value: runs.filter((r) => r.registry?.stage === "production").length },
+        { label: "Not logged", value: runs.filter((r) => r.kind !== "empty" && !r.registry).length },
         { label: "No output yet", value: runs.filter((r) => r.kind === "empty").length },
         { label: "Campaigns", value: campaigns.length },
       ]}

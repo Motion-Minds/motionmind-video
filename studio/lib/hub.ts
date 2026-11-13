@@ -2,7 +2,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { EDIT_LOCK, readLock, type EditLock } from "@/core/hyperframes";
-import { findTracked } from "@/core/runs";
+import { readReviewAt, type Review } from "@/core/review";
+import { findTracked, isImageDeliverable } from "@/core/runs";
 import { packageDir, Store, type RegistryRun, type Stage, type TrackedProject } from "@/core/store";
 import { CATEGORIES, type Category } from "./categories";
 
@@ -12,7 +13,7 @@ export const STORE_ROOT = store.root;
 const SERVABLE_ROOTS: Record<string, true> = { projects: true, shared: true };
 
 export { STAGES } from "@/core/store";
-export type { EditLock, RegistryRun, Stage, TrackedProject };
+export type { EditLock, RegistryRun, Review, Stage, TrackedProject };
 
 export interface Run {
   brand: string;
@@ -35,6 +36,8 @@ export interface Run {
   hyperframes: string | null;
   /** Open HyperFrames Studio session (runs/<v>/.editing.json written by `motionmind edit`); null when closed or stale. */
   editing: EditLock | null;
+  /** Reviewer comments and verdict (runs/<v>/review.json); empty when nobody has reviewed yet. */
+  review: Review;
 }
 
 export interface Campaign {
@@ -92,7 +95,7 @@ function buildRun(brand: string, campaign: string, version: string, registry: Re
   const sheetRe = /contact[-_ ]?sheet/i;
   const mp4 = existing(reg?.artifacts.mp4) ?? top("video.mp4") ?? firstMatching(/\.mp4$/i);
   const images = files
-    .filter((n) => /\.(png|jpe?g|webp)$/i.test(n) && !sheetRe.test(n) && isFile(path.join(abs, n)))
+    .filter((n) => isImageDeliverable(n) && isFile(path.join(abs, n)))
     .map((n) => `${dir}/${n}`);
   return {
     brand,
@@ -111,6 +114,7 @@ function buildRun(brand: string, campaign: string, version: string, registry: Re
     modified: fs.statSync(abs).mtime.toISOString(),
     hyperframes: hyperframesVersion(abs),
     editing: readLock(path.join(abs, EDIT_LOCK)),
+    review: readReviewAt(abs),
   };
 }
 

@@ -81,9 +81,15 @@ Show the table in chat and wait for approval.
 
 ### 5. Review — Gate 3
 Render a draft (`motionmind render …`), log it as `staging`, and tell the user where to watch it
-(Studio → run page). Offer `motionmind edit …` so they can change text, timing or audio in HyperFrames Studio without
-code. While `.editing.json` exists you do not touch `src/`. After they close it: `npx hyperframes history`, apply
-their notes, add lasting preferences to `TASTE.md` → feedback rules.
+(Studio → run page). There they (or their client) leave comments pinned to a video time and choose **Approve** or
+**Request changes**; everything is stored in `runs/<v>/review.json` and logged in `LOG.md`. Offer `motionmind edit …`
+so they can change text, timing or audio in HyperFrames Studio without code. While `.editing.json` exists you do not
+touch `src/`. After they close it: `npx hyperframes history`.
+
+Then read the review: `motionmind review <brand>/<campaign> <version>`. Each open comment is one fix; make the fixes in
+the next version (`v<N+1>`) unless they are technical fixes before approval, then mark each one done with
+`--resolve <id>` on the version that was reviewed. Add lasting preferences to `TASTE.md` → feedback rules. The verdict
+is the user's: never pass `--approve` or `--request-changes` yourself unless they tell you to.
 
 ### 6. Render + QA
 `motionmind render` and walk `references/qa.md`. Adjust master gain until −14 LUFS ±0.5 with TP ≤ −1 dBFS.

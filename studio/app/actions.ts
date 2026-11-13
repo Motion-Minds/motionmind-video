@@ -2,6 +2,7 @@
 // Mutations call the same core functions as the `motionmind` CLI, so both always behave the same.
 import path from "node:path";
 import { revalidatePath } from "next/cache";
+import * as review from "@/core/review";
 import * as runs from "@/core/runs";
 import { SLUG, VERSION, UserError } from "@/core/store";
 import { STAGES, getRun, readRegistry, store, type Stage } from "@/lib/hub";
@@ -125,4 +126,64 @@ export async function logRun(_prev: ActionState, form: FormData): Promise<Action
     design: run.design ?? undefined,
     force: form.get("force") === "on",
   }));
+}
+
+export async function logImageRun(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const t = target(form);
+  if (t instanceof UserError) return { ok: false, output: "Invalid run." };
+  const [brand, name] = t.campaign.split("/");
+  const run = getRun(brand, name, t.version);
+  if (run?.kind !== "image") return { ok: false, output: "This run has no image deliverable to log." };
+  const title = text(form, "title");
+  const stage = text(form, "stage") as Stage;
+  if (!title) return { ok: false, output: "Title is required." };
+  if (!STAGES.includes(stage)) return { ok: false, output: `Unknown stage: ${stage}` };
+  const params: Record<string, string> = {};
+  for (const [key, field] of [["concept_name", "concept"], ["hook_copy", "hook"], ["cta_copy", "cta"]] as const) {
+    if (text(form, field)) params[key] = text(form, field);
+  }
+  return attempt(() => runs.logImages(store, { campaign: t.campaign, version: t.version, source: run.dir, title, stage, params, notes: text(form, "notes") || undefined }));
+}
+
+// Review: the run page's comment list and verdict. Results are plain text; the page re-renders from review.json.
+function reviewTarget(form: FormData): { campaign: string; version: string } | UserError {
+  const t = target(form);
+  if (t instanceof UserError) return t;
+  const [brand, name] = t.campaign.split("/");
+  return getRun(brand, name, t.version) ? t : new UserError("Run not found.");
+}
+
+const reviewer = (form: FormData) => text(form, "by") || undefined;
+
+export async function addReviewComment(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const t = reviewTarget(form);
+  if (t instanceof UserError) return fail(t);
+  const at = text(form, "at");
+  return attempt(() => {
+    const c = review.addComment(store, { ...t, text: text(form, "text"), atS: at ? Number(at) : null, by: reviewer(form) });
+    return { lines: [`Comment #${c.id} added${c.at_s === null ? "" : ` at ${review.timecode(c.at_s)}`}.`] };
+  });
+}
+
+export async function resolveReviewComment(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const t = reviewTarget(form);
+  if (t instanceof UserError) return fail(t);
+  const id = Number(text(form, "id"));
+  if (!Number.isInteger(id) || id < 1) return { ok: false, output: "Invalid comment." };
+  const reopen = text(form, "op") === "reopen";
+  return attempt(() => {
+    review.resolveComment(store, { ...t, id, reopen });
+    return { lines: [`Comment #${id} ${reopen ? "reopened" : "resolved"}.`] };
+  });
+}
+
+export async function setReviewVerdict(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const t = reviewTarget(form);
+  if (t instanceof UserError) return fail(t);
+  const status = text(form, "status") as review.Verdict;
+  if (!review.VERDICTS.includes(status)) return { ok: false, output: `Unknown verdict: ${status}` };
+  return attempt(() => {
+    review.setVerdict(store, { ...t, status, note: text(form, "note"), by: reviewer(form) });
+    return { lines: [status === "approved" ? "Approved. Promote it to production in the Stage panel when it should go live." : "Changes requested. The agent reads them with `motionmind review`."] };
+  });
 }

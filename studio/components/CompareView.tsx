@@ -94,7 +94,7 @@ export function CompareView({ runs, a, b }: { runs: CompareRun[]; a: string | nu
                   </optgroup>
                 ))}
               </select>
-              <p className="muted small" style={{ marginBottom: 10, minHeight: "1.4em" }}>
+              <p className="muted small" style={{ marginBottom: 10, height: "1.4em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {run && `${run.project} · logged ${run.registeredLabel}`}
                 {side === "b" && run && run.dir === suggested[0]?.dir &&
                   (run.registeredAt < left!.registeredAt || (run.registeredAt === left!.registeredAt && run.versionNumber < left!.versionNumber)

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { EditForm, LogForm, PromoteForm, RenderForm } from "@/components/ActionForms";
+import { EditForm, LogForm, LogImagesForm, PromoteForm, RenderForm } from "@/components/ActionForms";
 import { Markdown } from "@/components/Markdown";
+import { ReviewPanel } from "@/components/ReviewPanel";
 import { SafeZoneVideo } from "@/components/SafeZoneVideo";
 import { StagePill } from "@/components/StagePill";
 import { qaIssues } from "@/core/qa";
@@ -16,6 +17,7 @@ export default async function RunPage({ params }: { params: Promise<{ brand: str
   if (!run) notFound();
   const reg = run.registry;
   const m = reg?.metrics;
+  const isImages = reg?.params.engine === "image";
   const aspect = aspectOf(run);
   const category = CATEGORIES.find((c) => c.id === run.kind) ?? null;
   const breakdown = readText(run.breakdown);
@@ -24,9 +26,9 @@ export default async function RunPage({ params }: { params: Promise<{ brand: str
     ? [
         ["Run ID", <span className="mono">{reg.run_id}</span>],
         ["Engine", reg.params.skill_engine],
-        ["Resolution", m?.width ? `${m.width}×${m.height} (${aspect}) · ${m.fps} fps · ${m.duration_s} s` : "—"],
+        ["Resolution", m?.width ? (isImages ? `${m.images} image${m.images === 1 ? "" : "s"} · ${m.width}×${m.height} (${reg.params.aspect}${reg.params.mixed_sizes ? ", mixed sizes" : ""})` : `${m.width}×${m.height} (${aspect}) · ${m.fps} fps · ${m.duration_s} s`) : "—"],
         ["Size", m?.size_mb != null ? `${m.size_mb} MB` : "—"],
-        ["Loudness", m?.has_audio ? `${m.integrated_lufs} LUFS · TP ${m.true_peak_dbfs} dBFS` : "no audio"],
+        ["Loudness", isImages ? null : m?.has_audio ? `${m.integrated_lufs} LUFS · TP ${m.true_peak_dbfs} dBFS` : "no audio"],
         ["Concept", reg.params.concept_name],
         ["Hook", reg.params.hook_copy],
         ["CTA", reg.params.cta_copy],
@@ -37,7 +39,7 @@ export default async function RunPage({ params }: { params: Promise<{ brand: str
         ["Composition", typeof reg.params.composition === "string" ? `${reg.params.composition}${reg.params.scenes ? ` · ${reg.params.scenes} scenes` : ""}` : null],
         ["Variables", reg.params.variables ? <span className="mono small">{JSON.stringify(reg.params.variables)}</span> : null],
         ["Logged", reg.created_at],
-        ["SHA-256", <span className="mono small">{reg.hashes?.mp4_sha256?.slice(0, 16) ?? "—"}</span>],
+        ["SHA-256", <span className="mono small">{(reg.hashes?.mp4_sha256 ?? reg.hashes?.images_sha256)?.slice(0, 16) ?? "—"}</span>],
         ["Notes", reg.notes],
       ]
     : [];
@@ -55,7 +57,8 @@ export default async function RunPage({ params }: { params: Promise<{ brand: str
           <p className="lead mono small">{run.dir}/</p>
         </div>
         <div className="inline-form">
-          {run.kind === "image" ? <span className="pill">image</span> : <StagePill stage={reg?.stage ?? null} />}
+          {run.kind === "image" && <span className="pill">image</span>}
+          {(run.kind !== "image" || reg) && <StagePill stage={reg?.stage ?? null} />}
           {reg && run.mp4 && (qa.length ? <span className="pill stage-staging">QA ✗</span> : <span className="pill stage-production">QA ✓</span>)}
           {run.design && (
             <a className="btn" href={mediaUrl(run.design)} target="_blank" rel="noreferrer">
@@ -73,7 +76,7 @@ export default async function RunPage({ params }: { params: Promise<{ brand: str
       <div className={run.mp4 || run.hyperframes ? "grid two" : ""}>
         <div>
           {run.mp4 ? (
-            <SafeZoneVideo src={mediaUrl(run.mp4)} portrait={aspect === "9:16"} />
+            <SafeZoneVideo id="run-video" src={mediaUrl(run.mp4)} portrait={aspect === "9:16"} />
           ) : run.images.length ? (
             <div className="slides">
               {run.images.map((img) => (
@@ -87,6 +90,7 @@ export default async function RunPage({ params }: { params: Promise<{ brand: str
           ) : (
             <div className="empty">No output in this run yet.</div>
           )}
+          {run.kind !== "empty" && <ReviewPanel brand={brand} campaign={campaign} version={version} review={run.review} videoId={run.mp4 ? "run-video" : null} />}
         </div>
 
         <div>
@@ -163,6 +167,15 @@ export default async function RunPage({ params }: { params: Promise<{ brand: str
                 start as staging; production requires passing QA (−14 ±0.5 LUFS, true peak ≤ −1 dBFS) unless forced.
               </p>
               <LogForm brand={brand} campaign={campaign} version={version} defaultTitle={`${campaign} — ${version}`} defaultSkill={run.hyperframes ? `hyperframes ${run.hyperframes}` : "mp4"} />
+            </section>
+          ) : run.kind === "image" ? (
+            <section className="panel">
+              <h2>Not logged to the registry yet</h2>
+              <p className="muted small" style={{ marginBottom: 14 }}>
+                Records the {run.images.length} image{run.images.length === 1 ? "" : "s"} in this run (size, aspect ratio, SHA-256) in{" "}
+                <code>registry.json</code>, so the deliverable gets a stage like a video: staging, then production when it is the one that is posted.
+              </p>
+              <LogImagesForm brand={brand} campaign={campaign} version={version} defaultTitle={`${campaign} — ${version}`} />
             </section>
           ) : null}
         </div>

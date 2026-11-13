@@ -95,7 +95,20 @@ export async function sha256(file: string): Promise<string | null> {
   return hash.digest("hex");
 }
 
-// Time labels on the contact sheet; without any of these fonts the sheet is made without labels.
+/** Pixel size of a still image (PNG, JPEG, WebP) via ffprobe. */
+export async function probeImage(file: string): Promise<{ width: number; height: number }> {
+  try {
+    const { stdout } = await run("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", file], BIG);
+    const s = (JSON.parse(stdout).streams ?? [])[0] ?? {};
+    if (!s.width || !s.height) throw new Error("no image stream");
+    return { width: Number(s.width), height: Number(s.height) };
+  } catch (err) {
+    throw new UserError(`ffprobe could not read the image '${file}': ${(err as Error).message}`);
+  }
+}
+
+// Time labels on the contact sheet need a font and ffmpeg's drawtext filter (absent from builds without libfreetype,
+// e.g. Homebrew's ffmpeg 8+). Without either, the sheet is made without labels.
 const LABEL_FONTS = [
   "/System/Library/Fonts/Supplemental/Arial.ttf",
   "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", // Debian, Ubuntu
@@ -107,11 +120,15 @@ const LABEL_FONTS = [
   "C:/Windows/Fonts/arial.ttf",
 ];
 
-/** One frame per second, 10 per row, each stamped with its time. */
+let drawtext: Promise<boolean> | undefined;
+const hasDrawtext = () =>
+  (drawtext ??= run("ffmpeg", ["-hide_banner", "-filters"], BIG).then((r) => /^\s*\S+\s+drawtext\s/m.test(r.stdout), () => false));
+
+/** One frame per second, 10 per row, each stamped with its time when ffmpeg can draw text. */
 export async function contactSheet(video: string, out: string, durationS: number): Promise<void> {
   const rows = Math.max(1, Math.ceil((durationS || 1) / 10));
   const font = LABEL_FONTS.find(isFile);
-  const label = font
+  const label = font && (await hasDrawtext())
     ? `,drawtext=fontfile='${font.replace(/:/g, "\\:")}':text='%{pts\\:hms}':x=8:y=h-34:fontsize=22:fontcolor=white:box=1:boxcolor=black@0.55:boxborderw=6`
     : "";
   await run("ffmpeg", ["-v", "error", "-y", "-i", video, "-vf", `fps=1,scale=270:-2${label},tile=10x${rows}:padding=6:color=white`, "-frames:v", "1", out], BIG);

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.3.2
+
+- Review on every version: on a run page, reviewers leave comments pinned to a video time (click the time to jump
+  there), resolve them, and choose **Approve** or **Request changes**. Stored in `runs/<version>/review.json`, logged
+  in `LOG.md`, and shown as a pill on the run cards. Agents read and resolve it with
+  `motionmind review <brand>/<campaign> <version> [--comment … --at <s>] [--resolve <id>]`; the motionmind skill
+  reads the review at Gate 3 and leaves the verdict to the user.
+- Images get stages: `motionmind log <folder|image> --campaign b/c` (or the form on an image run's page) records a
+  carousel, cover or thumbnail in the registry with its image count, size, aspect ratio (4:5, 1.91:1, …) and a
+  SHA-256, so it moves through staging → production → archived like a video. A run folder of the campaign is logged
+  in place; other folders are copied. Promoting images archives only the previous production *images* of the same
+  aspect ratio, never the campaign's video. The Images page counts production and not-logged deliverables.
+- Contact sheets no longer fail (and with them every `render` and `log`) on ffmpeg builds without the `drawtext`
+  filter, such as Homebrew's ffmpeg 9; the sheet is made without time labels instead.
+- Compare on narrow windows (≈1080 px): both players keep equal width and stay aligned; the long "suggested" hint no
+  longer wraps or widens its column.
+- README: a "Step by step" section with real recordings of setup, log + QA, promote, tracking, the Studio and compare,
+  and a pointer to the new [motionmind-use](https://github.com/Motion-Minds/motionmind-use) workflow skill.
+
 ## 0.3.1
 
 - Compare: picking A fills B with A's previous version in the same campaign (same aspect ratio first; the next

@@ -32,6 +32,9 @@ def skip(directory: str, names: list[str]) -> list[str]:
     out = [n for n in names if n in {"node_modules", ".next", "dist", "__pycache__", ".DS_Store", "next-env.d.ts"} or n.endswith((".tsbuildinfo", ".tgz"))]
     if pathlib.Path(directory).resolve() == (ROOT / "studio").resolve():
         out += [n for n in names if n in {"README.md", "LICENSE", "NOTICE.md"}]
+    # Full logo archive (masters + PNG exports) is hub documentation; the public brand kit keeps only logos/*.svg.
+    if pathlib.Path(directory).resolve() == (ROOT / "shared" / "brands" / "motionmind" / "logos").resolve():
+        out += [n for n in names if n in {"master", "export"}]
     return out
 
 

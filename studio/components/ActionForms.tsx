@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
-import { editRun, importRun, initRun, logRun, promoteRun, renderRun, trackProject, untrackProject, type ActionState } from "@/app/actions";
+import { editRun, importRun, initRun, logImageRun, logRun, promoteRun, renderRun, trackProject, untrackProject, type ActionState } from "@/app/actions";
 import { QA_LUFS, QA_LUFS_TOLERANCE, QA_TRUE_PEAK_MAX } from "@/core/qa";
 import type { EditLock, Stage } from "@/lib/hub";
 
@@ -266,6 +266,55 @@ export function LogForm(props: { brand: string; campaign: string; version: strin
       <div>
         <button className="btn primary" disabled={pending}>
           {pending ? "Measuring & logging…" : "Log to registry (motionmind log)"}
+        </button>
+      </div>
+      <Result state={state} />
+    </form>
+  );
+}
+
+export function LogImagesForm(props: { brand: string; campaign: string; version: string; defaultTitle: string }) {
+  const [state, action, pending] = useActionState(logImageRun, null);
+  return (
+    <form action={action} className="form">
+      {(["brand", "campaign", "version"] as const).map((k) => (
+        <input key={k} type="hidden" name={k} value={props[k]} />
+      ))}
+      <div className="form-row">
+        <label className="field">
+          Title
+          <input name="title" defaultValue={props.defaultTitle} required />
+        </label>
+        <label className="field">
+          Stage
+          <select name="stage" defaultValue="staging">
+            <option value="staging">staging</option>
+            <option value="production">production</option>
+            <option value="archived">archived</option>
+          </select>
+        </label>
+      </div>
+      <div className="form-row">
+        <label className="field">
+          Concept
+          <input name="concept" />
+        </label>
+        <label className="field">
+          Hook (first slide)
+          <input name="hook" />
+        </label>
+        <label className="field">
+          CTA
+          <input name="cta" />
+        </label>
+      </div>
+      <label className="field">
+        Notes
+        <input name="notes" />
+      </label>
+      <div>
+        <button className="btn primary" disabled={pending}>
+          {pending ? "Logging…" : "Log images to registry (motionmind log)"}
         </button>
       </div>
       <Result state={state} />
